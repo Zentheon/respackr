@@ -35,20 +35,20 @@ Speaking of `buildcfg.json`, this file contains various configuration parameters
 
 ## Configuration options:
 
-`name`: The name of your resourcepack. This is used for naming .zip files.
-`description`: The description of your pack. This will be used for the pack.mcmeta files it creates.
-`source_dir`: Directory to load pack files from. Generally should be left as-is.
-`output_dir`: Directory to put the created resourcepacks.
-`license_file`: Name of the license file in the same folder as the script. Makes it so you don't have to have a copy inside `/src`
-`allowed_paths`: List of paths inside `source_dir` the script will add to output packs. Useful if you have unusual files to include.
-`formats`: Dictionary of pack formats with assotiated versions. The formats are very important for script function, and the values (version names) for each one are used for .zip file naming.
+- `name`: The name of your resourcepack. This is used for naming .zip files.
+- `description`: The description of your pack. This will be used for the pack.mcmeta files it creates.
+- `source_dir`: Directory to load pack files from. Generally should be left as-is.
+- `output_dir`: Directory to put the created resourcepacks.
+- `license_file`: Name of the license file in the same folder as the script. Makes it so you don't have to have a copy inside `/src`
+- `allowed_paths`: List of paths inside `source_dir` the script will add to output packs. Useful if you have unusual files to include.
+- `formats`: Dictionary of pack formats with assotiated versions. The formats are very important for script function, and the values (version names) for each one are used for .zip file naming.
 
 #### SVG processing-specific:
 
-`process_svg_images`: If `true`, the script will enable extra features for processing vector graphics. If `false`, all other related settings remain unloaded and can be omitted. 
-`scales`: Dictionary of `scale: dpi` mappings to use. Resourcepacks are created in subdirectories for each format if `process_svg_images` is true.
-`theme_dir`: Directory path that the script will look for theme files in.
-`default_colors`: `color name: hex code` mappings. When a theme is provided, the script will search for these codes and replace them with ones in the theme file with the same name.
+- `process_svg_images`: If `true`, the script will enable extra features for processing vector graphics. If `false`, all other related settings remain unloaded and can be omitted. 
+- `scales`: Dictionary of `scale: dpi` mappings to use. Resourcepacks are created in subdirectories for each format if `process_svg_images` is true.
+- `theme_dir`: Directory path that the script will look for theme files in.
+- `default_colors`: `color name: hex code` mappings. When a theme is provided, the script will search for these codes and replace them with ones in the theme file with the same name.
 
 
 # Usage
