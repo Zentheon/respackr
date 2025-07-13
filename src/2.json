@@ -1,0 +1,7 @@
+{
+	"exclusions": [
+		"assets/minecraft/lang",
+		"assets/minecraft/textures/gui/world_selection.png",
+		"assets/minecraft/textures/gui/recipe_book.png"
+	]
+}

@@ -1,0 +1,5 @@
+{
+	"exclusions": [
+		"assets/assets/minecraft/textures/gui/sprites/container/slot"
+	]
+}

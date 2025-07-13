@@ -1,0 +1,20 @@
+{
+	"exclusions": [
+		"assets/minecraft/textures/item/empty_slot_amethyst_shard.png",
+		"assets/minecraft/textures/item/empty_slot_axe.png",
+		"assets/minecraft/textures/item/empty_slot_diamond.png",
+		"assets/minecraft/textures/item/empty_slot_emerald.png",
+		"assets/minecraft/textures/item/empty_slot_hoe.png",
+		"assets/minecraft/textures/item/empty_slot_ingot.png",
+		"assets/minecraft/textures/item/empty_slot_lapis_lazuli.png",
+		"assets/minecraft/textures/item/empty_slot_pickaxe.png",
+		"assets/minecraft/textures/item/empty_slot_quartz.png",
+		"assets/minecraft/textures/item/empty_slot_redstone_dust.png",
+		"assets/minecraft/textures/item/empty_slot_shovel.png",
+		"assets/minecraft/textures/item/empty_slot_smithing_template_armor_trim.png",
+		"assets/minecraft/textures/item/empty_slot_smithing_template_netherite_upgrade.png",
+		"assets/minecraft/textures/item/empty_slot_sword.png",
+		"assets/minecraft/textures/gui/slider.png",
+		"assets/minecraft/textures/gui/container/legacy_smithing.png"
+	]
+}

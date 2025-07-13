@@ -1,0 +1,17 @@
+{
+	"exclusions": [
+		"assets/minecraft/lang",
+		"assets/minecraft/textures/item",
+		"assets/minecraft/textures/mob_effect",
+		"assets/minecraft/textures/gui/container/blast_furnace.png",
+		"assets/minecraft/textures/gui/container/cartography_table.png",
+		"assets/minecraft/textures/gui/container/grindstone.png",
+		"assets/minecraft/textures/gui/container/loom.png",
+		"assets/minecraft/textures/gui/container/smoker.png",
+		"assets/minecraft/textures/gui/container/stonecutter.png",
+		"assets/minecraft/textures/gui/container/villager2.png",
+		"assets/minecraft/textures/gui/accessibility.png",
+		"assets/minecraft/textures/gui/checkbox.png",
+		"assets/minecraft/textures/gui/recipe_button.png"
+	]
+}
