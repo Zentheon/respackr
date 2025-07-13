@@ -1,0 +1,6 @@
+{
+	"exclusions": [
+		"assets/minecraft/textures/gui/social_interactions.png",
+		"assets/minecraft/textures/gui/container/bundle.png"
+	]
+}

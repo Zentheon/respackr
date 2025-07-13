@@ -1,0 +1,5 @@
+{
+	"exclusions": [
+		"assets/minecraft/textures/gui/container/gamemode_switcher.png"
+	]
+}

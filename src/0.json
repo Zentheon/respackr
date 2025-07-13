@@ -1,0 +1,8 @@
+{
+	"exclusions": [
+		"assets/minecraft/textures/gui/server_selection.png",
+		"assets/minecraft/textures/gui/spectator_widgets.png",
+		"assets/minecraft/textures/gui/bars.png",
+    "assets/minecraft/textures/gui/container/enchanting_table.png"
+	]
+}

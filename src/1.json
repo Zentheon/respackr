@@ -1,0 +1,6 @@
+{
+	"exclusions": [
+		"assets/minecraft/textures/gui/advancements",
+		"assets/minecraft/textures/gui/container/shulker_box.png"
+	]
+}

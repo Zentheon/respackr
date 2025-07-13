@@ -1,0 +1,6 @@
+{
+	"exclusions": [
+		"assets/minecraft/textures/gui/report_button.png",
+		"assets/minecraft/textures/gui/chat_tags.png"
+	]
+}

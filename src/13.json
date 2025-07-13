@@ -1,0 +1,12 @@
+{
+	"exclusions": [
+		"assets/minecraft/textures/gui/footer_separator.png",
+		"assets/minecraft/textures/gui/header_separator.png",
+		"assets/minecraft/textures/gui/light_dirt_background.png",
+		"assets/minecraft/textures/gui/unseen_notification.png",
+		"assets/minecraft/textures/gui/info_icon.png",
+		"assets/minecraft/textures/gui/tab_button.png",
+		"assets/minecraft/textures/gui/title/minceraft.png",
+		"assets/minecraft/textures/gui/title/realms.png"
+	]
+}
