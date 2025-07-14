@@ -9,7 +9,7 @@ from collections import defaultdict
 
 # Basic script info
 script_name = "respack-genscript"
-script_ver = "v1.0.0"
+script_ver = "v1.0.1"
 config_file = './buildcfg.json'
 
 # Configure argument parsing
@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('-d', '--dry-run', action='store_true', help='Skip writing .zip archives to disk')
     parser.add_argument('--theme', type=str, help='Specify a theme to apply color mappings from (e.g., "--theme=nord")')
     parser.add_argument('--scale', type=int, help='Generate only for a specific scale (e.g., "--scale=3" for 72DPI)')
-    parser.add_argument('--format', type=int, help='Generate only for a specific format key (e.g., "--format-key=18")')
+    parser.add_argument('--format', type=int, help='Generate only for a specific format key (e.g., "--format=6")')
     parser.add_argument('--packver', default='dev', type=str, help='Pack version string to use. Defaults to "dev"')
     return parser.parse_args()
 
@@ -155,12 +155,14 @@ def load_config(config_file):
 
             # Get allowed paths
             allowed_paths = config.get('allowed_paths', [])
-            quiet_print(f"  Output directory: {allowed_paths}")
+            quiet_print(f"  Allowed path in output packs: {allowed_paths}")
 
             # Get format data
             formats_data = {int(k): v for k, v in config['formats'].items()}
             sorted_formats = dict(sorted(formats_data.items(), reverse=True))
-            quiet_print(f"  Formats: {list(sorted_formats.keys())}")
+            quiet_print("  Formats:")
+            for format in sorted_formats.keys():
+                quiet_print(f"    {format}: {sorted_formats[format]}")
 
             # Get svg processing toggle
             svg_process_toggle = config.get('process_svg_images')
@@ -423,7 +425,7 @@ def apply_exclusions(current_format, source_dir, src_files, gen_images):
 
     # Check for and load exlusion file from src_files
     if f"{current_format}.json" in src_files:
-        verbose_print(f"  Found {current_format}.json")
+        verbose_print(f"  Found exclusion list: {current_format}.json")
         file_data = src_files[f"{current_format}.json"].decode('UTF8')
         exclusion_data = json.loads(file_data)
         # Normalize excluded paths
@@ -468,7 +470,6 @@ def apply_exclusions(current_format, source_dir, src_files, gen_images):
     except Exception as e:
         record_error(None, "exclusion_error", f"Error applying exclusions: {str(e)}")
 
-    very_verbose_print()
     return src_files, gen_images
 
 def apply_inclusions(current_format, src_files, gen_images):
@@ -483,37 +484,50 @@ def apply_inclusions(current_format, src_files, gen_images):
     Returns:
         Tuple of (modified_src_files, modified_gen_images)
     """
-    verbose_print(f"  Merging assets for format: {current_format}")
 
-    # Process src_files
+    # Function to match gen_images inclusions
+    def gen_images_filter(gen_images, inclusion_dir):
+        filtered_img = {}
+        for dpi, value in gen_images.items():
+            if isinstance(value, dict):
+                sub_matches = {k: v for k, v in value.items() if k.startswith(str(inclusion_dir))}
+                if sub_matches:  # Only add if there are matches
+                    filtered_img[dpi] = sub_matches
+
+        return filtered_img
+
+    # Initial dictionaries
+    inclusion_dir = f"{current_format}/"
+    filtered_src = {k: v for k, v in src_files.items() if k.startswith(inclusion_dir)}
+    filtered_img = gen_images_filter(gen_images, inclusion_dir)
+
+    # Check if any entries were found
+    if filtered_src or filtered_img:
+        verbose_print(f"  Merging format inclusion folder: {inclusion_dir}")
+    else:
+        verbose_print(f"  Skipping merging (no inclusion folder): {inclusion_dir}")
+        return src_files, gen_images
+
     try:
-        new_src_files = {}
-        for rel_path, data in src_files.items():
-            prefix = f"{current_format}/"
-            if rel_path.startswith(prefix):
-                new_rel_path = f"{rel_path[len(prefix):]}"
-                new_src_files[new_rel_path] = data
-                very_verbose_print(f"    Remapped file: {rel_path} -> {new_rel_path}")
-            else:
-                new_src_files[rel_path] = data
+        # Process filtered_src (src_files)
+        for rel_path, data in filtered_src.items():
+            new_rel_path = f"{rel_path[len(inclusion_dir):]}"
+            src_files[new_rel_path] = data
+            del src_files[rel_path] # Previous path is no longer needed
+            very_verbose_print(f"    Remapped file: {rel_path} -> {new_rel_path}")
 
-        # Process gen_images
-        new_gen_images = defaultdict(dict)
-        for dpi, png_files in gen_images.items():
+        # Process filtered_img (gen_images)
+        for dpi, png_files in filtered_img.items():
             for rel_path, data in png_files.items():
-                prefix = f"{current_format}/"
-                if rel_path.startswith(prefix):
-                    new_rel_path = f"{rel_path[len(prefix):]}"
-                    new_gen_images[dpi][new_rel_path] = data
-                    very_verbose_print(f"    Remapped gen. PNG: {rel_path} -> {new_rel_path} (DPI: {dpi})")
-                else:
-                    new_gen_images[dpi][rel_path] = data
+                new_rel_path = f"{rel_path[len(inclusion_dir):]}"
+                gen_images[dpi][new_rel_path] = data
+                del gen_images[dpi][rel_path] # Previous path is no longer needed
+                very_verbose_print(f"    Remapped gen. PNG: {rel_path} -> {new_rel_path} (DPI: {dpi})")
 
     except Exception as e:
         record_error(None, "inclusion_error", f"Error merging inclusions: {str(e)}")
 
-    very_verbose_print()
-    return new_src_files, new_gen_images
+    return src_files, gen_images
 
 def generate_pack_mcmeta(current_format, formats, pack_description, scale, src_files):
     """
@@ -752,7 +766,7 @@ def main():
         )
         # Skip zip creation if format flag is given and not matching current pass.
         if args.format is not None and current_format != args.format:
-            verbose_print(f"Skipping .zip creation of format: {current_format} (not the specified --format-key)")
+            verbose_print(f"  Skipping .zip creation of format: {current_format} (not the specified --format-key)")
             continue
 
         # Only create per-scale packs if svg_process_toggle is True
@@ -790,7 +804,7 @@ def main():
 
     quiet_print("\nDone!")
     if not args.dry_run:
-        quiet_print("Output available in ./generated")
+        quiet_print(f"Output available in {output_dir}")
     else:
         quiet_print("No files created (--dry-run)")
 
