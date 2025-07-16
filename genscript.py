@@ -12,9 +12,11 @@ from xml.etree import ElementTree as ET
 from collections import defaultdict
 
 # Script modules
+from modules.log import setup_logging
+from modules.error import record_warn, record_err, record_crit
 from modules import (
     stats,
-    arguments,
+    arguments
 )
 
 # Basic script info
@@ -23,41 +25,27 @@ script_ver = "v1.0.1"
 script_desc = "Processes resourcepack sources and creates ready-to-use .zip files"
 config_file = './buildcfg.json'
 
-args = arguments.create_args(script_name, script_desc, script_ver)
-
-def record_error(exit_code, error_type, message):
-    """
-    Error logging. If exit_code is None, the error is considered nonfatal.
-    Code contexts in the scope of this script:
-        4-10: Problems with configuration file
-        11-20: Source scan problems
-        21-30: Incorrect flag values
-        31-40: SVG theming-specific
-        51-60: ZIP creation-specific
-    """
-    stats.errors[error_type] += 1
-    # Quit execution if exit_code is provided
-    if exit_code is not None:
-        log.info(f"\nError ({error_type}): {message}. Exiting.")
-        exit(exit_code)
-
-    log.verbose(f"Error ({error_type}): {message}")
+arguments.create_args(script_name, script_desc, script_ver)
+args = arguments.get_args()
+setup_logging()
 
 def load_config(config_file):
 
     # Make sure config actually exists
     if not os.path.exists(config_file):
-        record_error(4, "missing_config_file", f"Missing configuration file: {config_file}")
+        record_err(4, "missing_config_file", f"Missing configuration file: {config_file}")
 
-    log.verbose(f"\nLoading config file: {config_file}")
+    log.verbose("")
+    log.verbose(f"Loading config file: {config_file}")
 
     try:
         # TODO: return a dictionary of config values instead
         with open(config_file, 'r') as f:
             config = json.load(f)
+            log.info("")
             # Get pack name
             pack_name = config.get('name')
-            log.info(f"\n  Pack name: '{pack_name}'")
+            log.info(f"  Pack name: '{pack_name}'")
 
             # Get pack description
             pack_description = config.get('description')
@@ -123,7 +111,7 @@ def load_config(config_file):
                 )
 
     except Exception as e:
-        record_error(5, "config_load_error", f"\nError loading config: {str(e)}")
+        record_err(5, "config_load_error", f"Error loading config: {str(e)}")
 
 def scan_src_files(source_dir):
     """
@@ -137,10 +125,11 @@ def scan_src_files(source_dir):
         dict: Dictionary mapping relative paths to file contents
     """
     if not os.path.exists(source_dir):
-        record_error(11, "missing_source_dir", f"Missing source directory: {source_dir}")
+        record_err(11, "missing_source_dir", f"Missing source directory: {source_dir}")
 
     src_files = {}
-    log.info(f"\nScanning source directory: {source_dir}")
+    log.info("")
+    log.info(f"Scanning source directory: {source_dir}")
 
     # Walk through directory tree
     for root, dirs, files in os.walk(source_dir):
@@ -164,12 +153,13 @@ def scan_src_files(source_dir):
                     log.debug(f"  Loaded: {rel_path}")
 
             except Exception as e:
-                record_error(None, "file_load_error", f"Error loading {rel_path}: {str(e)}")
+                record_err(12, "file_load_error", f"Error loading {rel_path}: {str(e)}")
                 continue
 
     # Update total files count
     stats.talley['source_files_loaded'] = len(src_files)
-    log.info(f"\nTotal files found: {len(src_files)}")
+    log.info("")
+    log.info(f"Total files found: {len(src_files)}")
 
     return src_files
 
@@ -188,17 +178,18 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
     Returns:
         dict: The modified src_files dictionary with themed SVG content.
     """
+    log.trace("Called apply_theme")
     if not theme_name:
         log.verbose(f"  Skipping theme edits (no theme specified)")
         return src_files
 
     if not os.path.isdir(theme_dir):
-        record_error(31, "theme_dir_not_found", f"Theme directory: '{theme_dir}' is not valid.")
+        record_err(31, "theme_dir_not_found", f"Theme directory: '{theme_dir}' is not valid.")
         return src_files
 
     theme_file = os.path.join(theme_dir, f"{theme_name}.json")
     if not os.path.exists(theme_file):
-        record_error(32, "theme_file_not_found", f"Theme file not found: {theme_file}")
+        record_err(32, "theme_file_not_found", f"Theme file not found: {theme_file}")
         return src_files
 
     try:
@@ -212,7 +203,7 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
                 log.debug(f"    Applying theme to SVG: {rel_path}")
                 svg_content = src_files[rel_path].decode('utf-8') if isinstance(src_files[rel_path], bytes) else src_files[rel_path]
                 if svg_content is None:
-                    record_error(None, "svg_load_error", f"Could not load SVG content for {rel_path}")
+                    record_err(35, "svg_load_error", f"Could not load SVG content for {rel_path}")
                     continue
 
                 final_color_map = {}
@@ -224,8 +215,6 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
                             # Stat logging
                             stats.svg_talley['svg_files_edited'] += 1
                             color_stat = f"{default_color_key} ({default_hex_color} -> {theme_color_map[default_color_key]})"
-                            if color_stat not in stats.svg_talley['theme_color_edits']:
-                                stats.svg_talley['theme_color_edits'][color_stat] = 0
                             stats.svg_talley['theme_color_edits'][color_stat] += color_count
 
                             final_color_map[default_hex_color.lower()] = theme_color_map[default_color_key].lower()
@@ -242,7 +231,7 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
                 src_files[rel_path] = themed_svg.encode('utf-8') # Update the src_files with themed SVG content
 
     except Exception as e:
-        record_error(None, "theme_processing_error", f"Error processing theme '{theme_name}': {str(e)}")
+        record_err(33, "theme_processing_error", f"Error processing theme '{theme_name}': {str(e)}")
 
     return src_files
 
@@ -263,6 +252,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
     # Import CarioSVG now, since it's needed
     from cairosvg import svg2png
 
+    log.trace("Called conver_svg_to_png")
     gen_images = defaultdict(dict)
 
     # Iterate over a copy of keys because we'll be modifying src_files
@@ -275,7 +265,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
                 svg_content = src_files[rel_path].decode('utf-8') if isinstance(src_files[rel_path], bytes) else src_files[rel_path]
 
                 if svg_content is None:
-                    record_error(None, "svg_load_error", f"Could not load SVG content for {rel_path}")
+                    record_err(42, "svg_load_error", f"Could not load SVG content for {rel_path}")
                     continue
 
                 # Generate images for each DPI in the filtered list
@@ -292,7 +282,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
                         height = float(height_attr[:-2]) if height_attr.endswith('pt') else float(height_attr)
                     except (ValueError, TypeError):
                         width, height = 1024, 1024
-                        record_error(None, "svg_dimensions_warning", f"Using default 1024x2024 for {rel_path}")
+                        record_err(43, "svg_bad_dimensions", f"Using default 1024x2024 for {rel_path}")
 
                     scale_factor = dpi / 96.0
                     target_width = int(width * scale_factor)
@@ -311,7 +301,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
                     )
 
                     if not png_data:
-                        record_error(None, "no_png_data", f"Empty PNG data returned for {rel_path}")
+                        record_err(43, "no_png_data", f"Empty PNG data returned for {rel_path}")
 
                     # Store in gen_images dictionary
                     gen_images[dpi][f"{rel_path[:-4]}.png"] = png_data
@@ -322,9 +312,10 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
                 del src_files[rel_path]
 
             except Exception as e:
-                record_error(None, "svg_processing_error", f"Error creating image for SVG: {str(e)}\n⤷ At: {rel_path}")
+                record_err(41, "svg_processing_error", f"Error creating image for SVG: {str(e)}\n⤷ At: {rel_path}")
 
-    log.verbose(f"\nTotal images created: {stats.svg_talley['png_files_generated']}")
+    log.verbose("")
+    log.verbose(f"Total images created: {stats.svg_talley['png_files_generated']}")
     return gen_images
 
 def apply_exclusions(current_format, source_dir, src_files, gen_images):
@@ -387,7 +378,7 @@ def apply_exclusions(current_format, source_dir, src_files, gen_images):
                             log.debug(f"    Skipped nonpresent entry in gen_images: {rel_path}")
 
     except Exception as e:
-        record_error(None, "exclusion_error", f"Error applying exclusions: {str(e)}")
+        record_err(61, "exclusion_error", f"Error applying exclusions: {str(e)}")
 
     return src_files, gen_images
 
@@ -444,7 +435,7 @@ def apply_inclusions(current_format, src_files, gen_images):
                 log.debug(f"    Remapped gen. PNG: {rel_path} -> {new_rel_path} (DPI: {dpi})")
 
     except Exception as e:
-        record_error(None, "inclusion_error", f"Error merging inclusions: {str(e)}")
+        record_err(71, "inclusion_error", f"Error merging inclusions: {str(e)}")
 
     return src_files, gen_images
 
@@ -516,16 +507,18 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
         (bool): True if a zip was created or --dry-run is flagged
     """
     if args.dry_run:
-        log.verbose(f"\nDry run enabled, skipping creation of ZIP: {zip_path}")
+        log.verbose("")
+        log.verbose(f"Dry run enabled, skipping creation of ZIP: {zip_path}")
         return True
 
-    log.verbose(f"\nCreating ZIP archive: {zip_path}")
+    log.verbose("")
+    log.verbose(f"Creating ZIP archive: {zip_path}")
     created_files = 0
 
     try:
         os.makedirs(os.path.dirname(zip_path), exist_ok=True)
     except OSError as e:
-        record_error(51, "directory_creation_error", f"Failed to create directory: {e}")
+        record_err(51, "directory_creation_error", f"Failed to create directory: {e}")
         return False
 
     try:
@@ -548,7 +541,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                     created_files += 1
                     log.verbose(f"  Added license: {license_file}")
                 except Exception as e:
-                    record_error(53, "license_read_error", f"Failed to read license file: {license_file}: {str(e)}")
+                    record_err(53, "license_read_error", f"Failed to read license file: {license_file}: {str(e)}")
 
             # Include files from src_files
             for rel_path, data in src_files.items():
@@ -560,7 +553,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                         created_files += 1
                         log.debug(f"  Added file to ZIP: {rel_path}")
                     except Exception as e:
-                        record_error(None, "zip_write_error", f"Error writing file {rel_path} to ZIP: {str(e)}")
+                        record_err(None, "zip_write_error", f"Error writing file {rel_path} to ZIP: {str(e)}")
 
             # Add generated PNGs for the current DPI
             if dpi is not None:
@@ -569,7 +562,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                         # Check if path matches any allowed_path prefix for generated PNGs
                         if any(rel_path.startswith(p) or rel_path == p for p in allowed_paths):
                             if rel_path in added_files_in_zip:
-                                record_error(None, "duplicate_png", f"Attempted to add already-existing PNG to ZIP (DPI {dpi})\n⤷ Path: {rel_path}")
+                                record_err(None, "duplicate_png", f"Attempted to add already-existing PNG to ZIP (DPI {dpi})\n⤷ Path: {rel_path}")
                                 continue # Skip adding the duplicate
                             try:
                                 zipf.writestr(rel_path, data)
@@ -577,7 +570,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                                 created_files += 1
                                 log.debug(f"  Added gen. PNG to ZIP (DPI {dpi}): {rel_path}")
                             except Exception as e:
-                                record_error(None, "zip_write_error", f"Error writing generated PNG to ZIP: {str(e)}\n⤷ Path: {rel_path}")
+                                record_err(None, "zip_write_error", f"Error writing generated PNG to ZIP: {str(e)}\n⤷ Path: {rel_path}")
 
         if created_files > 0:
             stats.talley['archives_created'] += 1
@@ -586,7 +579,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
         return True
 
     except Exception as e:
-        record_error(None, "zip_creation_error", f"Error creating ZIP: {e}")
+        record_err(None, "zip_creation_error", f"Error creating ZIP: {e}")
         return False
 
 def main():
@@ -610,20 +603,21 @@ def main():
     # Validate formats
     if args.format:
         if not args.format in formats:
-          record_error(21, "format_not_found", f"Specified format: {args.format} not present in {config_file} 'formats'")
+          record_err(21, "format_not_found", f"Specified format: {args.format} not present in {config_file} 'formats'")
 
     # Validate license, if provided
     if license_file:
         if not os.path.exists(license_file):
-            record_error(52, "license_not_found", f"License file does not exist: {license_file}")
+            record_err(52, "license_not_found", f"License file does not exist: {license_file}")
 
     # Filter scales_from_config and check if args.scale is valid
     if args.scale is not None and svg_process_toggle:
         if args.scale in scales_from_config:
             dpi_values_to_process = {args.scale: scales_from_config[args.scale]}
-            log.info(f"\nGenerating only for scale {args.scale} ({scales_from_config[args.scale]} DPI)")
+            log.info("")
+            log.info(f"Generating only for scale {args.scale} ({scales_from_config[args.scale]} DPI)")
         else:
-            record_error(22, "scale_not_found", f"Specified scale '{args.scale}' not found in buildcfg.json")
+            record_err(22, "scale_not_found", f"Specified scale '{args.scale}' not found in buildcfg.json")
 
     else:
         dpi_values_to_process = scales_from_config
@@ -636,7 +630,8 @@ def main():
     # SVG editing and PNG generation
     if svg_process_toggle == True:
         gen_images = defaultdict(dict)
-        log.info("\nProcessing SVG files...")
+        log.info("")
+        log.info("Processing SVG files...")
         svg_files_processed = 0
 
         # Apply theme to all SVG files in src_files
@@ -654,17 +649,20 @@ def main():
         )
 
     # Process formats and create ZIPs
-    log.info("\nProcessing formats and creating ZIP archives...")
+    log.info("")
+    log.info("Processing formats and creating ZIP archives...")
 
     for current_format in sorted(formats.keys(), reverse=True):
         # Break loop if current `current_format` is lower than `args.format` (Pack would have been created by the previous loop)
         if args.format is not None and current_format < args.format:
-            log.verbose(f"\nEnding processing as current format {current_format} is lower than specified --format-key {args.format}")
+            log.verbose("")
+            log.verbose(f"Ending processing as current format {current_format} is lower than specified --format-key {args.format}")
             break
 
         stats.talley['formats_processed'] += 1
 
-        log.verbose(f"\nProcessing format: {current_format}")
+        log.verbose("")
+        log.verbose(f"Processing format: {current_format}")
 
         # Check for and process a format-specific .json file in `./src`
         # with an "exclusions" list.
@@ -721,7 +719,8 @@ def main():
                 current_format
             )
 
-    log.info("\nDone!")
+    log.info("")
+    log.info("Done!")
     if not args.dry_run:
         log.info(f"Output available in {output_dir}")
     else:

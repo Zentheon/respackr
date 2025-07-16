@@ -7,12 +7,13 @@ Uses argparse to parse commandline arguments. Also sets up logging.
 # Revision of this module:
 __version__ = "1.0.0"
 
-# Default
 import argparse
 import logging
 
-# Module imports
-from modules.log import setup_logging
+# Allow args to be accessed globally
+args = None
+def get_args():
+    return args
 
 # Main class
 class Args:
@@ -23,25 +24,25 @@ class Args:
         )
         self.add_arguments(script_name, script_ver)
         self.args = self.parser.parse_args()
-        setup_logging(quiet=self.args.quiet, verbosity=self.args.verbose)
-        logging.info("Test log")
-        logging.verbose("Verbose log")
-        logging.debug("File logging")
 
     def add_arguments(self, script_name, script_ver):
-        self.parser.add_argument('--version', action='version', version=f'{script_name} {script_ver}')
-        self.parser.add_argument('-v', '--verbose', action='count', default=0,
+        parse = self.parser.add_argument
+        parse('--version', action='version', version=f'{script_name} {script_ver}')
+        parse('-v', '--verbose', action='count', default=0,
             help='Increase verbosity level (-v=INFO, -vv=VERBOSE, -vvv=DEBUG)')
-        self.parser.add_argument('-q', '--quiet', action='store_true', help='Run without any feedback')
-        self.parser.add_argument('-d', '--dry-run', action='store_true', help='Skip writing .zip archives to disk')
-        self.parser.add_argument('--theme', type=str, help='Specify a theme to apply color mappings from (e.g., "--theme=nord")')
-        self.parser.add_argument('--scale', type=int, help='Generate only for a specific scale (e.g., "--scale=3" for 72DPI)')
-        self.parser.add_argument('--format', type=int, help='Generate only for a specific format key (e.g., "--format=6")')
-        self.parser.add_argument('--packver', default='dev', type=str, help='Pack version string to use. Defaults to "dev"')
+        parse('-q', '--quiet', action='store_true', help='Run without any feedback')
+        parse('-d', '--dry-run', action='store_true', help='Skip writing .zip archives to disk')
+        parse('-e', '--exit-error', action='store_true', help='Makes non-critical errors trigger an exit')
+        parse('--debug', action='store_true', help='Adds extra formatting to log messages')
+        parse('--theme', type=str, help='Specify a theme to apply color mappings from (e.g., "--theme=nord")')
+        parse('--scale', type=int, help='Generate only for a specific scale (e.g., "--scale=3" for 72DPI)')
+        parse('--format', type=int, help='Generate only for a specific format key (e.g., "--format=6")')
+        parse('--packver', default='dev', type=str, help='Pack version string to use. Defaults to "dev"')
 
     def __getattr__(self, name):
         return getattr(self.args, name)
 
 # Create an instance of Args to parse command line arguments
 def create_args(script_name, script_desc, script_ver):
-    return Args(script_name, script_desc, script_ver)
+    global args
+    args = Args(script_name, script_desc, script_ver)

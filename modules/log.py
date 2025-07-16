@@ -1,13 +1,10 @@
 # log.py
 
-"""
-Logging configuration
-"""
-
 # Revision of this module:
 __version__ = "1.0.0"
 
 import logging
+from modules.arguments import get_args
 
 def add_logging_level(level_val, level_name, method_name=None):
     """
@@ -50,26 +47,36 @@ def add_logging_level(level_val, level_name, method_name=None):
     setattr(logging.getLoggerClass(), method_name, for_log_level)
     setattr(logging, method_name, log_to_root)
 
-def setup_logging(quiet=False, verbosity=0):
-    """Configure logging based on verbosity and quiet flags"""
+def set_format():
+    if get_args().debug:
+        fmt = '%(asctime)s:%(name)s:%(levelname)s: %(message)s'
+        return(fmt)
+    else:
+        fmt = '%(messages)s'
+
+def setup_logging():
+    # --verbose and --quiet arguments are used here
     add_logging_level(logging.INFO - 5, "VERBOSE")
     add_logging_level(logging.DEBUG - 5, "TRACE")
-    if quiet:
-        logging.basicConfig(level=logging.CRITICAL)
+    args = get_args()
+    logging.trace(f"Setup logging with args (quiet={args.quiet}, verbosity={args.verbose})")
+    log_level = 10
+    if args.quiet:
+        log_level = logging.CRITICAL
     else:
-        log_level = logging.WARNING  # Default
-        if verbosity == 0:
-            log_level = logging.INFO
-        elif verbosity == 1:
+        log_level = logging.INFO  # Default
+        if args.verbose == 1:
             log_level = logging.VERBOSE
-        elif verbosity == 2:
+        elif args.verbose == 2:
             log_level = logging.DEBUG
-        elif verbosity >= 3:
+        elif args.verbose >= 3:
             log_level = logging.TRACE
 
-        logging.basicConfig(
-            level=log_level,
-            format='%(message)s',  # Suppress level names
-            datefmt='%H:%M:%S'     # Optional: time format if you want timestamps
-        )
+    logging.basicConfig(
+        force=True, # Required now for some reason
+        level=log_level,
+        format=set_format(),  # Suppress level names
+        datefmt='%H:%M:%S'
+    )
+
 

@@ -20,7 +20,7 @@ talley = {
 
 # SVG processing-specific
 svg_talley = {
-    'theme_color_edits': {},
+    'theme_color_edits': defaultdict(int),
     'svg_files_edited': 0,
     'png_files_generated': 0,
 }
@@ -28,8 +28,12 @@ svg_talley = {
 # Files loaded from load_src by extension
 file_extensions = defaultdict(int)
 
-# Error types
-errors = defaultdict(int)
+# Types of problem codes
+codes = {
+    'warning': defaultdict(int),
+    'error': defaultdict(int),
+    'critical': defaultdict(int)
+}
 
 
 def print_summary():
@@ -59,9 +63,16 @@ def print_summary():
         for color, amount in sorted(svg_talley['theme_color_edits'].items(), key=lambda item: item[1], reverse=True):
             print(f"- {color.lstrip('.')}: {amount}")
 
+    print("\nWarnings:")
+    if codes['warning']:
+        for warning, count in sorted(codes['warning'].items()):
+            print(f"- {warning}: {count}")
+    else:
+        print("- No warnings recorded")
+
     print("\nErrors:")
-    if errors:
-        for error, count in sorted(errors.items()):
+    if codes['error']:
+        for error, count in sorted(codes['error'].items()):
             print(f"- {error}: {count}")
     else:
         print("- No errors recorded")
