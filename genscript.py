@@ -1,52 +1,29 @@
+#!/usr/bin/env python
 # genscript.py
+
+# Native imports
 import os
 import json
 import zipfile
 import argparse
+import logging as log
 from pathlib import Path
 from xml.etree import ElementTree as ET
 from collections import defaultdict
 
+# Script modules
+from modules import (
+    stats,
+    arguments,
+)
+
 # Basic script info
 script_name = "respack-genscript"
 script_ver = "v1.0.1"
+script_desc = "Processes resourcepack sources and creates ready-to-use .zip files"
 config_file = './buildcfg.json'
 
-# Configure argument parsing
-def parse_args():
-    parser = argparse.ArgumentParser(
-        prog=f"{script_name}",
-        description="Processes resourcepack sources and creates ready-to-use .zip files"
-        )
-
-    parser.add_argument('--version', action='version', version=f'%(prog)s {script_ver}')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Print out live status info and error messages')
-    parser.add_argument('-vv', '--very-verbose', action='store_true', help='Print out each path as it is accessed')
-    parser.add_argument('-q', '--quiet', action='store_true', help='Run without any feedback')
-    parser.add_argument('-d', '--dry-run', action='store_true', help='Skip writing .zip archives to disk')
-    parser.add_argument('--theme', type=str, help='Specify a theme to apply color mappings from (e.g., "--theme=nord")')
-    parser.add_argument('--scale', type=int, help='Generate only for a specific scale (e.g., "--scale=3" for 72DPI)')
-    parser.add_argument('--format', type=int, help='Generate only for a specific format key (e.g., "--format=6")')
-    parser.add_argument('--packver', default='dev', type=str, help='Pack version string to use. Defaults to "dev"')
-    return parser.parse_args()
-
-args = parse_args()
-
-# Initialize statistics tracking variables
-proc_stats = {
-    'talley': {
-        'formats_processed': 0,
-        'archives_created': 0,
-        'source_files_loaded': 0,
-    },
-    'svg_talley': {
-        'theme_color_stats': {},
-        'svg_files_edited': 0,
-        'png_files_generated': 0,
-    },
-    'file_extensions': {},
-    'errors': defaultdict(int)
-}
+args = arguments.create_args(script_name, script_desc, script_ver)
 
 def record_error(exit_code, error_type, message):
     """
@@ -58,129 +35,74 @@ def record_error(exit_code, error_type, message):
         31-40: SVG theming-specific
         51-60: ZIP creation-specific
     """
-    proc_stats['errors'][error_type] += 1
+    stats.errors[error_type] += 1
     # Quit execution if exit_code is provided
     if exit_code is not None:
-        quiet_print(f"\nError ({error_type}): {message}. Exiting.")
+        log.info(f"\nError ({error_type}): {message}. Exiting.")
         exit(exit_code)
 
-    verbose_print(f"Error ({error_type}): {message}")
-
-def verbose_print(*messages):
-    if args.verbose and not args.quiet:
-        print(*messages)
-    elif args.very_verbose and not args.quiet:
-        print(*messages)
-
-def very_verbose_print(*messages):
-    if args.very_verbose and not args.quiet:
-        print(*messages)
-
-def quiet_print(*messages):
-    if not args.quiet:
-        print(*messages)
-
-def print_summary():
-    """
-    Various tallies are kept track of during the script,
-    which can give insights into problems with the pack or script.
-    """
-
-    if args.quiet:
-        return
-
-    talley = proc_stats['talley']
-    svg_talley = proc_stats['svg_talley']
-
-    print("\n======= SUMMARY =======")
-
-    print("\nTalley:")
-    print(f"- Total files loaded: {talley['source_files_loaded']}")
-    print(f"- Formats processed: {talley['formats_processed']}")
-    print(f"- Resourcepack ZIPs written: {talley['archives_created']}")
-
-    print("\nLoaded Filetypes:")
-    for filetype, amount in sorted(proc_stats['file_extensions'].items(), key=lambda item: item[1], reverse=True):
-        print(f"- {filetype.lstrip('.')} ({amount})")
-
-    # SVG editing-specific
-    if svg_talley['png_files_generated']:
-        print("\nSVG Talley:")
-        print(f"- SVG files themed: {svg_talley['svg_files_edited']}")
-        print(f"- PNG files generated: {svg_talley['png_files_generated']}")
-
-    if svg_talley['theme_color_stats']:
-        print("\nColors applied to SVG objects:")
-        for color, amount in sorted(svg_talley['theme_color_stats'].items(), key=lambda item: item[1], reverse=True):
-            print(f"- {color.lstrip('.')}: {amount}")
-
-    print("\nErrors:")
-    if proc_stats['errors']:
-        for error, count in sorted(proc_stats['errors'].items()):
-            print(f"- {error}: {count}")
-    else:
-        print("- No errors recorded")
-    print("========================")
+    log.verbose(f"Error ({error_type}): {message}")
 
 def load_config(config_file):
-    # TODO: Possibly make config loading dynamic
 
     # Make sure config actually exists
     if not os.path.exists(config_file):
         record_error(4, "missing_config_file", f"Missing configuration file: {config_file}")
 
-    verbose_print(f"\nLoading config file: {config_file}")
+    log.verbose(f"\nLoading config file: {config_file}")
+
     try:
+        # TODO: return a dictionary of config values instead
         with open(config_file, 'r') as f:
             config = json.load(f)
             # Get pack name
             pack_name = config.get('name')
-            quiet_print(f"\n  Pack name: '{pack_name}'")
+            log.info(f"\n  Pack name: '{pack_name}'")
 
             # Get pack description
             pack_description = config.get('description')
-            quiet_print(f"  Pack description: {pack_description}")
+            log.info(f"  Pack description: {pack_description}")
 
             # Get source dir
             source_dir = config.get('source_dir')
-            quiet_print(f"  Source directory: {source_dir}")
+            log.info(f"  Source directory: {source_dir}")
 
             # Get output dir
             output_dir = config.get('output_dir')
-            quiet_print(f"  Output directory: {output_dir}")
+            log.info(f"  Output directory: {output_dir}")
 
             # Get license inclusion switch
             license_file = config.get('license_file')
-            quiet_print(f"  Include license is set to: {license_file}")
+            log.info(f"  Include license is set to: {license_file}")
 
             # Get allowed paths
             allowed_paths = config.get('allowed_paths', [])
-            quiet_print(f"  Allowed path in output packs: {allowed_paths}")
+            log.info(f"  Allowed path in output packs: {allowed_paths}")
 
             # Get format data
             formats_data = {int(k): v for k, v in config['formats'].items()}
             sorted_formats = dict(sorted(formats_data.items(), reverse=True))
-            quiet_print("  Formats:")
+            log.info("  Formats:")
             for format in sorted_formats.keys():
-                quiet_print(f"    {format}: {sorted_formats[format]}")
+                log.info(f"    {format}: {sorted_formats[format]}")
 
             # Get svg processing toggle
             svg_process_toggle = config.get('process_svg_images')
-            quiet_print(f"  SVG processing is set to: {svg_process_toggle}")
+            log.info(f"  SVG processing is set to: {svg_process_toggle}")
 
             # SVG processing-specific
             if svg_process_toggle == True:
                 # Get scale mappings
                 scales = {int(k): v for k, v in config.get('scales', {}).items()}
-                quiet_print(f"  Scale mappings: {list(scales.keys())}")
+                log.info(f"  Scale mappings: {list(scales.keys())}")
 
                 # Get theme dir
                 theme_dir = config.get('theme_dir')
-                quiet_print(f"  Output directory: {theme_dir}")
+                log.info(f"  Output directory: {theme_dir}")
 
                 # Get default color mappings
                 default_colors = config.get('default_colors', {})
-                quiet_print(f"  Color mappings: {list(default_colors.keys())}")
+                log.info(f"  Color mappings: {list(default_colors.keys())}")
             else:
                 scales = None
                 theme_dir = None
@@ -218,7 +140,7 @@ def scan_src_files(source_dir):
         record_error(11, "missing_source_dir", f"Missing source directory: {source_dir}")
 
     src_files = {}
-    quiet_print(f"\nScanning source directory: {source_dir}")
+    log.info(f"\nScanning source directory: {source_dir}")
 
     # Walk through directory tree
     for root, dirs, files in os.walk(source_dir):
@@ -235,21 +157,19 @@ def scan_src_files(source_dir):
                     # Track file extensions in talley
                     ext = os.path.splitext(filename)[1].lower()
                     if ext:
-                        if ext not in proc_stats['file_extensions']:
-                            proc_stats['file_extensions'][ext] = 0
-                        proc_stats['file_extensions'][ext] += 1
+                        stats.file_extensions[ext] += 1
 
 
                     src_files[rel_path] = file_content
-                    very_verbose_print(f"  Loaded: {rel_path}")
+                    log.debug(f"  Loaded: {rel_path}")
 
             except Exception as e:
                 record_error(None, "file_load_error", f"Error loading {rel_path}: {str(e)}")
                 continue
 
     # Update total files count
-    proc_stats['talley']['source_files_loaded'] = len(src_files)
-    quiet_print(f"\nTotal files found: {len(src_files)}")
+    stats.talley['source_files_loaded'] = len(src_files)
+    log.info(f"\nTotal files found: {len(src_files)}")
 
     return src_files
 
@@ -269,7 +189,7 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
         dict: The modified src_files dictionary with themed SVG content.
     """
     if not theme_name:
-        verbose_print(f"  Skipping theme edits (no theme specified)")
+        log.verbose(f"  Skipping theme edits (no theme specified)")
         return src_files
 
     if not os.path.isdir(theme_dir):
@@ -286,11 +206,10 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
             theme_data = json.load(f)
             theme_color_map = theme_data.get('colors', {})
 
-        verbose_print(f"  Editing with theme '{theme_name}':")
+        log.verbose(f"  Editing with theme '{theme_name}':")
         for rel_path in list(src_files.keys()):
-            very_verbose_print("check")
             if rel_path.lower().endswith('.svg'):
-                very_verbose_print(f"    Applying theme to SVG: {rel_path}")
+                log.debug(f"    Applying theme to SVG: {rel_path}")
                 svg_content = src_files[rel_path].decode('utf-8') if isinstance(src_files[rel_path], bytes) else src_files[rel_path]
                 if svg_content is None:
                     record_error(None, "svg_load_error", f"Could not load SVG content for {rel_path}")
@@ -303,17 +222,17 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
                             color_count = svg_content.count(default_hex_color)
 
                             # Stat logging
-                            proc_stats['svg_talley']['svg_files_edited'] += 1
+                            stats.svg_talley['svg_files_edited'] += 1
                             color_stat = f"{default_color_key} ({default_hex_color} -> {theme_color_map[default_color_key]})"
-                            if color_stat not in proc_stats['svg_talley']['theme_color_stats']:
-                                proc_stats['svg_talley']['theme_color_stats'][color_stat] = 0
-                            proc_stats['svg_talley']['theme_color_stats'][color_stat] += color_count
+                            if color_stat not in stats.svg_talley['theme_color_edits']:
+                                stats.svg_talley['theme_color_edits'][color_stat] = 0
+                            stats.svg_talley['theme_color_edits'][color_stat] += color_count
 
                             final_color_map[default_hex_color.lower()] = theme_color_map[default_color_key].lower()
-                            very_verbose_print(f"      Mapping {color_count} instances of color '{default_color_key}': '{default_hex_color}' -> '{theme_color_map[default_color_key]}'")
+                            log.trace(f"      Mapping {color_count} instances of color '{default_color_key}': '{default_hex_color}' -> '{theme_color_map[default_color_key]}'")
                         else:
                             final_color_map[default_hex_color.lower()] = default_hex_color.lower()
-                            very_verbose_print(f"      No theme color for '{default_color_key}', keeping default '{default_hex_color}'")
+                            log.trace(f"      No theme color for '{default_color_key}', keeping default '{default_hex_color}'")
 
                 # Apply all color replacements
                 themed_svg = svg_content
@@ -349,7 +268,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
     # Iterate over a copy of keys because we'll be modifying src_files
     for rel_path in list(src_files.keys()):
         if rel_path.lower().endswith('.svg'):
-            very_verbose_print(f"\nCreating PNG for SVG: {rel_path}")
+            log.debug(f"  Creating image(s) for SVG: {rel_path}")
 
             try:
                 # Load content from `src_files` (already themed if theme was applied)
@@ -361,7 +280,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
 
                 # Generate images for each DPI in the filtered list
                 for scale, dpi in dpi_values_to_process.items():
-                    very_verbose_print(f"  Converting to PNG at target DPI {dpi}...")
+                    log.trace(f"    Converting to PNG at target DPI {dpi}...")
 
                     # Parse SVG to get original dimensions
                     root = ET.fromstring(svg_content)
@@ -379,8 +298,8 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
                     target_width = int(width * scale_factor)
                     target_height = int(height * scale_factor)
 
-                    very_verbose_print(f"  Original dimensions: {width}x{height}pt")
-                    very_verbose_print(f"  Target dimensions: {target_width}x{target_height}px")
+                    log.trace(f"    Original dimensions: {width}x{height}pt")
+                    log.trace(f"    Target dimensions: {target_width}x{target_height}px")
 
                     png_data = svg2png(
                         bytestring=svg_content,
@@ -396,8 +315,8 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
 
                     # Store in gen_images dictionary
                     gen_images[dpi][f"{rel_path[:-4]}.png"] = png_data
-                    proc_stats['svg_talley']['png_files_generated'] += 1
-                    very_verbose_print(f"  Created PNG for Scale {scale} ({dpi} DPI): {rel_path[:-4]}.png")
+                    stats.svg_talley['png_files_generated'] += 1
+                    log.trace(f"    Created PNG for Scale {scale} ({dpi} DPI): {rel_path[:-4]}.png")
 
                 # Remove the SVG entry from src_files as it is no longer needed
                 del src_files[rel_path]
@@ -405,7 +324,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
             except Exception as e:
                 record_error(None, "svg_processing_error", f"Error creating image for SVG: {str(e)}\n⤷ At: {rel_path}")
 
-    verbose_print(f"\nTotal images created: {proc_stats['svg_talley']['png_files_generated']}")
+    log.verbose(f"\nTotal images created: {stats.svg_talley['png_files_generated']}")
     return gen_images
 
 def apply_exclusions(current_format, source_dir, src_files, gen_images):
@@ -425,13 +344,13 @@ def apply_exclusions(current_format, source_dir, src_files, gen_images):
 
     # Check for and load exlusion file from src_files
     if f"{current_format}.json" in src_files:
-        verbose_print(f"  Found exclusion list: {current_format}.json")
+        log.verbose(f"  Found exclusion list: {current_format}.json")
         file_data = src_files[f"{current_format}.json"].decode('UTF8')
         exclusion_data = json.loads(file_data)
         # Normalize excluded paths
         excluded_paths = [p.replace('\\', '/').rstrip('/') for p in exclusion_data.get('exclusions')]
     else:
-        verbose_print(f"  {current_format}.json not found, skipping exclusions")
+        log.verbose(f"  {current_format}.json not found, skipping exclusions")
         return src_files, gen_images
 
     try:
@@ -443,10 +362,10 @@ def apply_exclusions(current_format, source_dir, src_files, gen_images):
                 if (normalized_rel_path == excluded_path or
                     normalized_rel_path.startswith(f"{excluded_path}/")):
                     if rel_path in src_files:
-                        very_verbose_print(f"    Excluding file: {rel_path}")
+                        log.debug(f"    Excluding file: {rel_path}")
                         del src_files[rel_path]
                     else:
-                        very_verbose_print(f"    Skipped nonpresent entry in src_files: {rel_path}")
+                        log.debug(f"    Skipped nonpresent entry in src_files: {rel_path}")
 
         # Process generated PNGs across all DPI variants
         for dpi, png_files in list(gen_images.items()):
@@ -462,10 +381,10 @@ def apply_exclusions(current_format, source_dir, src_files, gen_images):
                     if (normalized_rel_path == png_path or
                         normalized_rel_path.startswith(f"{png_path}/")):
                         if rel_path in png_files:
-                            very_verbose_print(f"    Excluding generated PNG: {rel_path} (DPI {dpi})")
+                            log.debug(f"    Excluding generated PNG: {rel_path} (DPI {dpi})")
                             del png_files[rel_path]
                         else:
-                            very_verbose_print(f"    Skipped nonpresent entry in gen_images: {rel_path}")
+                            log.debug(f"    Skipped nonpresent entry in gen_images: {rel_path}")
 
     except Exception as e:
         record_error(None, "exclusion_error", f"Error applying exclusions: {str(e)}")
@@ -503,9 +422,9 @@ def apply_inclusions(current_format, src_files, gen_images):
 
     # Check if any entries were found
     if filtered_src or filtered_img:
-        verbose_print(f"  Merging format inclusion folder: {inclusion_dir}")
+        log.verbose(f"  Merging format inclusion folder: {inclusion_dir}")
     else:
-        verbose_print(f"  Skipping merging (no inclusion folder): {inclusion_dir}")
+        log.verbose(f"  Skipping merging (no inclusion folder): {inclusion_dir}")
         return src_files, gen_images
 
     try:
@@ -514,7 +433,7 @@ def apply_inclusions(current_format, src_files, gen_images):
             new_rel_path = f"{rel_path[len(inclusion_dir):]}"
             src_files[new_rel_path] = data
             del src_files[rel_path] # Previous path is no longer needed
-            very_verbose_print(f"    Remapped file: {rel_path} -> {new_rel_path}")
+            log.debug(f"    Remapped file: {rel_path} -> {new_rel_path}")
 
         # Process filtered_img (gen_images)
         for dpi, png_files in filtered_img.items():
@@ -522,7 +441,7 @@ def apply_inclusions(current_format, src_files, gen_images):
                 new_rel_path = f"{rel_path[len(inclusion_dir):]}"
                 gen_images[dpi][new_rel_path] = data
                 del gen_images[dpi][rel_path] # Previous path is no longer needed
-                very_verbose_print(f"    Remapped gen. PNG: {rel_path} -> {new_rel_path} (DPI: {dpi})")
+                log.debug(f"    Remapped gen. PNG: {rel_path} -> {new_rel_path} (DPI: {dpi})")
 
     except Exception as e:
         record_error(None, "inclusion_error", f"Error merging inclusions: {str(e)}")
@@ -543,7 +462,7 @@ def generate_pack_mcmeta(current_format, formats, pack_description, scale, src_f
     pack_mcmeta_path = "pack.mcmeta"
     if pack_mcmeta_path in src_files:
         del src_files[pack_mcmeta_path]
-        very_verbose_print(f"  Removed existing {pack_mcmeta_path}")
+        log.debug(f"  Removed existing {pack_mcmeta_path}")
 
     # Bump format to 1 if it's 0
     # "Format 0" packs are created due to a change in the
@@ -579,7 +498,7 @@ def generate_pack_mcmeta(current_format, formats, pack_description, scale, src_f
     pack_mcmeta_content = json.dumps(pack_data, indent=4).encode('utf-8')
     # Add to src_files
     src_files[pack_mcmeta_path] = pack_mcmeta_content
-    verbose_print(f"  Generated new {pack_mcmeta_path} with pack_format {current_format} and description '{pack_description}{check_scale(scale)}")
+    log.verbose(f"  Generated new {pack_mcmeta_path} with pack_format {current_format} and description '{pack_description}{check_scale(scale)}")
 
 def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file, allowed_paths, current_format):
     """
@@ -597,10 +516,10 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
         (bool): True if a zip was created or --dry-run is flagged
     """
     if args.dry_run:
-        verbose_print(f"\nDry run enabled, skipping creation of ZIP: {zip_path}")
+        log.verbose(f"\nDry run enabled, skipping creation of ZIP: {zip_path}")
         return True
 
-    verbose_print(f"\nCreating ZIP archive: {zip_path}")
+    log.verbose(f"\nCreating ZIP archive: {zip_path}")
     created_files = 0
 
     try:
@@ -619,7 +538,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                 zipf.writestr("pack.png", src_files[f"scale_{scale}.png"])
                 added_files_in_zip.add(f"scale_{scale}.png")
                 created_files += 1
-                verbose_print(f"  Added scale_{scale}.png -> pack.png (DPI {dpi})")
+                log.verbose(f"  Added scale_{scale}.png -> pack.png (DPI {dpi})")
 
             # Add license, if provided
             if license_file and os.path.exists(license_file):
@@ -627,7 +546,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                     zipf.write(license_file)
                     added_files_in_zip.add(license_file)
                     created_files += 1
-                    verbose_print(f"  Added license: {license_file}")
+                    log.verbose(f"  Added license: {license_file}")
                 except Exception as e:
                     record_error(53, "license_read_error", f"Failed to read license file: {license_file}: {str(e)}")
 
@@ -639,7 +558,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                         zipf.writestr(rel_path, data)
                         added_files_in_zip.add(rel_path)
                         created_files += 1
-                        very_verbose_print(f"  Added file to ZIP: {rel_path}")
+                        log.debug(f"  Added file to ZIP: {rel_path}")
                     except Exception as e:
                         record_error(None, "zip_write_error", f"Error writing file {rel_path} to ZIP: {str(e)}")
 
@@ -656,14 +575,14 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                                 zipf.writestr(rel_path, data)
                                 added_files_in_zip.add(rel_path)
                                 created_files += 1
-                                very_verbose_print(f"  Added gen. PNG to ZIP (DPI {dpi}): {rel_path}")
+                                log.debug(f"  Added gen. PNG to ZIP (DPI {dpi}): {rel_path}")
                             except Exception as e:
                                 record_error(None, "zip_write_error", f"Error writing generated PNG to ZIP: {str(e)}\n⤷ Path: {rel_path}")
 
         if created_files > 0:
-            proc_stats['talley']['archives_created'] += 1
+            stats.talley['archives_created'] += 1
 
-        verbose_print(f"  Total files added to ZIP: {created_files}")
+        log.verbose(f"  Total files added to ZIP: {created_files}")
         return True
 
     except Exception as e:
@@ -671,8 +590,8 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
         return False
 
 def main():
-    quiet_print(f"{script_name} {script_ver}")
-    quiet_print("Starting pack generation pipeline...")
+    log.info(f"{script_name} {script_ver}")
+    log.info("Starting pack generation pipeline...")
 
     ( # Load config
         pack_name,
@@ -702,7 +621,7 @@ def main():
     if args.scale is not None and svg_process_toggle:
         if args.scale in scales_from_config:
             dpi_values_to_process = {args.scale: scales_from_config[args.scale]}
-            quiet_print(f"\nGenerating only for scale {args.scale} ({scales_from_config[args.scale]} DPI)")
+            log.info(f"\nGenerating only for scale {args.scale} ({scales_from_config[args.scale]} DPI)")
         else:
             record_error(22, "scale_not_found", f"Specified scale '{args.scale}' not found in buildcfg.json")
 
@@ -717,7 +636,7 @@ def main():
     # SVG editing and PNG generation
     if svg_process_toggle == True:
         gen_images = defaultdict(dict)
-        verbose_print("\nProcessing SVG files...")
+        log.info("\nProcessing SVG files...")
         svg_files_processed = 0
 
         # Apply theme to all SVG files in src_files
@@ -735,17 +654,17 @@ def main():
         )
 
     # Process formats and create ZIPs
-    quiet_print("\nProcessing formats and creating ZIP archives...")
+    log.info("\nProcessing formats and creating ZIP archives...")
 
     for current_format in sorted(formats.keys(), reverse=True):
         # Break loop if current `current_format` is lower than `args.format` (Pack would have been created by the previous loop)
         if args.format is not None and current_format < args.format:
-            verbose_print(f"\nEnding processing as current format {current_format} is lower than specified --format-key {args.format}")
+            log.verbose(f"\nEnding processing as current format {current_format} is lower than specified --format-key {args.format}")
             break
 
-        proc_stats['talley']['formats_processed'] += 1
+        stats.talley['formats_processed'] += 1
 
-        verbose_print(f"\nProcessing format: {current_format}")
+        log.verbose(f"\nProcessing format: {current_format}")
 
         # Check for and process a format-specific .json file in `./src`
         # with an "exclusions" list.
@@ -766,7 +685,7 @@ def main():
         )
         # Skip zip creation if format flag is given and not matching current pass.
         if args.format is not None and current_format != args.format:
-            verbose_print(f"  Skipping .zip creation of format: {current_format} (not the specified --format-key)")
+            log.verbose(f"  Skipping .zip creation of format: {current_format} (not the specified --format-key)")
             continue
 
         # Only create per-scale packs if svg_process_toggle is True
@@ -802,14 +721,15 @@ def main():
                 current_format
             )
 
-    quiet_print("\nDone!")
+    log.info("\nDone!")
     if not args.dry_run:
-        quiet_print(f"Output available in {output_dir}")
+        log.info(f"Output available in {output_dir}")
     else:
-        quiet_print("No files created (--dry-run)")
+        log.info("No files created (--dry-run)")
 
     # Print final summary
-    print_summary()
+    if not args.quiet:
+        stats.print_summary()
 
 if __name__ == "__main__":
     main()
