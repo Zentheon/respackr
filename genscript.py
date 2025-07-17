@@ -30,60 +30,9 @@ from modules import (
     theme,
     svg2png,
     exclusion,
-    inclusion
+    inclusion,
+    mcmeta
 )
-
-def generate_pack_mcmeta(current_format, scale, src_files):
-    """
-    Generates the pack.mcmeta file and adds it to src_files.
-    Args:
-        current_format (int): The current format key.
-        config.sorted_formats (dict): Dictionary of all available config.sorted_formats.
-        description (str): Base description for the pack.
-        scale (int): The current scale being processed.
-        src_files (dict): The dictionary of files to be included in the ZIP.
-    """
-    # Check for and remove previous pack.mcmeta
-    pack_mcmeta_path = "pack.mcmeta"
-    if pack_mcmeta_path in src_files:
-        del src_files[pack_mcmeta_path]
-        log.debug(f"  Removed existing {pack_mcmeta_path}")
-
-    # Bump format to 1 if it's 0
-    # "Format 0" packs are created due to a change in the
-    # enchanting table UI in 1.7 without a format change.
-    if current_format == 0:
-      current_format = 1
-
-    # Determine supported_formats range
-    min_supported_format = current_format
-    for key in config.sorted_formats.keys():
-        if key < current_format:
-            min_supported_format = key + 1
-            break
-
-    supported_formats_str = f"{min_supported_format}, {current_format}"
-
-    # If scale is None (svg processing disabled), don't add a scale suffix
-    def check_scale(scale):
-        if scale is None:
-            return ""
-        else:
-            return f" (Scale {scale})"
-
-    # Create pack.mcmeta content
-    pack_data = {
-        "pack": {
-            "pack_format": current_format,
-            "supported_formats": [supported_formats_str],
-            "description": f"{config.description}{check_scale(scale)}"
-        }
-    }
-    # Convert to JSON string and then to bytes
-    pack_mcmeta_content = json.dumps(pack_data, indent=4).encode('utf-8')
-    # Add to src_files
-    src_files[pack_mcmeta_path] = pack_mcmeta_content
-    log.verbose(f"  Generated new {pack_mcmeta_path} with pack_format {current_format} and description '{config.description}{check_scale(scale)}")
 
 def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, current_format):
     """
@@ -266,7 +215,7 @@ def main():
         # Only create per-scale packs if config.process_svg_images is True
         if config.process_svg_images == True:
             for scale, dpi in dpi_values_to_process.items():
-                generate_pack_mcmeta(current_format, scale, src_files)
+                mcmeta.generate_pack_mcmeta(current_format, scale, src_files)
 
                 zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[current_format]}-scale-{scale}.zip"
                 zip_path = os.path.join(config.output_dir, str(current_format), zip_name)
@@ -280,7 +229,7 @@ def main():
                     current_format
                 )
         else: # Regular pack creation
-            generate_pack_mcmeta(current_format, None, src_files)
+            mcmeta.generate_pack_mcmeta(current_format, None, src_files)
 
             zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[current_format]}.zip"
             zip_path = os.path.join(config.output_dir, zip_name)
