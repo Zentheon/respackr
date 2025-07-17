@@ -1,140 +1,57 @@
 #!/usr/bin/env python
 # genscript.py
 
+# Basic script info
+script_name = "respack-genscript"
+script_ver = "v1.0.1"
+script_desc = "Processes resourcepack sources and creates ready-to-use .zip files"
+
 # Native imports
 import os
 import json
 import zipfile
-import argparse
 import logging as log
 from pathlib import Path
 from xml.etree import ElementTree as ET
 from collections import defaultdict
 
-# Script modules
-from modules.log import setup_logging
+# Arguments should be set up first
+from modules.arguments import create_args
+create_args(script_name, script_desc, script_ver)
+from modules.arguments import args
+
+# Logging is auto-initialized on import
+import modules.log
+
+# Load the rest
 from modules.error import record_warn, record_err, record_crit
+from modules.config import config
 from modules import (
-    stats,
-    arguments
+    stats
 )
 
-# Basic script info
-script_name = "respack-genscript"
-script_ver = "v1.0.1"
-script_desc = "Processes resourcepack sources and creates ready-to-use .zip files"
-config_file = './buildcfg.json'
-
-arguments.create_args(script_name, script_desc, script_ver)
-args = arguments.get_args()
-setup_logging()
-
-def load_config(config_file):
-
-    # Make sure config actually exists
-    if not os.path.exists(config_file):
-        record_err(4, "missing_config_file", f"Missing configuration file: {config_file}")
-
-    log.verbose("")
-    log.verbose(f"Loading config file: {config_file}")
-
-    try:
-        # TODO: return a dictionary of config values instead
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-            log.info("")
-            # Get pack name
-            pack_name = config.get('name')
-            log.info(f"  Pack name: '{pack_name}'")
-
-            # Get pack description
-            pack_description = config.get('description')
-            log.info(f"  Pack description: {pack_description}")
-
-            # Get source dir
-            source_dir = config.get('source_dir')
-            log.info(f"  Source directory: {source_dir}")
-
-            # Get output dir
-            output_dir = config.get('output_dir')
-            log.info(f"  Output directory: {output_dir}")
-
-            # Get license inclusion switch
-            license_file = config.get('license_file')
-            log.info(f"  Include license is set to: {license_file}")
-
-            # Get allowed paths
-            allowed_paths = config.get('allowed_paths', [])
-            log.info(f"  Allowed path in output packs: {allowed_paths}")
-
-            # Get format data
-            formats_data = {int(k): v for k, v in config['formats'].items()}
-            sorted_formats = dict(sorted(formats_data.items(), reverse=True))
-            log.info("  Formats:")
-            for format in sorted_formats.keys():
-                log.info(f"    {format}: {sorted_formats[format]}")
-
-            # Get svg processing toggle
-            svg_process_toggle = config.get('process_svg_images')
-            log.info(f"  SVG processing is set to: {svg_process_toggle}")
-
-            # SVG processing-specific
-            if svg_process_toggle == True:
-                # Get scale mappings
-                scales = {int(k): v for k, v in config.get('scales', {}).items()}
-                log.info(f"  Scale mappings: {list(scales.keys())}")
-
-                # Get theme dir
-                theme_dir = config.get('theme_dir')
-                log.info(f"  Output directory: {theme_dir}")
-
-                # Get default color mappings
-                default_colors = config.get('default_colors', {})
-                log.info(f"  Color mappings: {list(default_colors.keys())}")
-            else:
-                scales = None
-                theme_dir = None
-                default_colors = None
-
-            return(
-                pack_name,
-                pack_description,
-                source_dir,
-                output_dir,
-                license_file,
-                allowed_paths,
-                sorted_formats,
-                svg_process_toggle,
-                scales,
-                theme_dir,
-                default_colors
-                )
-
-    except Exception as e:
-        record_err(5, "config_load_error", f"Error loading config: {str(e)}")
-
-def scan_src_files(source_dir):
+def scan_src_files():
     """
     Scans and loads all files from the source directory into a dictionary.
     Counts different file types in the proc_stats talley.
 
     Args:
-        source_dir (str): Path to the source directory to scan
+        config.source_dir (str): Path to the source directory to scan
 
     Returns:
         dict: Dictionary mapping relative paths to file contents
     """
-    if not os.path.exists(source_dir):
-        record_err(11, "missing_source_dir", f"Missing source directory: {source_dir}")
+    if not os.path.exists(config.source_dir):
+        record_err(11, "missing_config.source_dir", f"Missing source directory: {config.source_dir}")
 
     src_files = {}
     log.info("")
-    log.info(f"Scanning source directory: {source_dir}")
+    log.info(f"Scanning source directory: {config.source_dir}")
 
     # Walk through directory tree
-    for root, dirs, files in os.walk(source_dir):
+    for root, dirs, files in os.walk(config.source_dir):
         for filename in files:
-            rel_path = os.path.relpath(os.path.join(root, filename), source_dir)
+            rel_path = os.path.relpath(os.path.join(root, filename), config.source_dir)
 
             # Convert Windows paths to Unix-style if needed
             rel_path = rel_path.replace('\\', '/')
@@ -164,16 +81,16 @@ def scan_src_files(source_dir):
     return src_files
 
 
-def apply_theme(src_files, theme_dir, theme_name, default_colors):
+def apply_theme(src_files, theme_name):
     """
     Replaces colors in SVG content based on a theme's color map JSON file and default colors as search keys.
     Iterates through src_files and modifies SVG content in place.
     Args:
         src_files (dict): The dictionary of source files.
-        theme_dir (str): Directory where theme JSON files are located.
+        config.theme_dir (str): Directory where theme JSON files are located.
         theme_name (str): The name of the theme to load (e.g., "nord").
             If None, no theme is applied.
-        default_colors (dict, optional): A dictionary of default color keys to their hex values
+        config.color_map (dict, optional): A dictionary of default color keys to their hex values
             (e.g., {'primary': '#RRGGBB'}).
     Returns:
         dict: The modified src_files dictionary with themed SVG content.
@@ -183,11 +100,11 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
         log.verbose(f"  Skipping theme edits (no theme specified)")
         return src_files
 
-    if not os.path.isdir(theme_dir):
-        record_err(31, "theme_dir_not_found", f"Theme directory: '{theme_dir}' is not valid.")
+    if not os.path.isdir(config.theme_dir):
+        record_err(31, "theme_dir_not_found", f"Theme directory: '{config.theme_dir}' is not valid.")
         return src_files
 
-    theme_file = os.path.join(theme_dir, f"{theme_name}.json")
+    theme_file = os.path.join(config.theme_dir, f"{theme_name}.json")
     if not os.path.exists(theme_file):
         record_err(32, "theme_file_not_found", f"Theme file not found: {theme_file}")
         return src_files
@@ -207,8 +124,8 @@ def apply_theme(src_files, theme_dir, theme_name, default_colors):
                     continue
 
                 final_color_map = {}
-                if default_colors:
-                    for default_color_key, default_hex_color in default_colors.items():
+                if config.color_map:
+                    for default_color_key, default_hex_color in config.color_map.items():
                         if default_color_key in theme_color_map and default_hex_color in svg_content:
                             color_count = svg_content.count(default_hex_color)
 
@@ -318,14 +235,14 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
     log.verbose(f"Total images created: {stats.svg_talley['png_files_generated']}")
     return gen_images
 
-def apply_exclusions(current_format, source_dir, src_files, gen_images):
+def apply_exclusions(current_format, src_files, gen_images):
     """
     Applies exclusion rules to both source files and generated images.
     Handles both file and directory paths.
 
     Args:
         current_format: The format key being processed
-        source_dir: Source directory path
+        config.source_dir: Source directory path
         src_files: Dictionary of original files
         gen_images: Dictionary of generated PNGs by DPI
 
@@ -439,12 +356,12 @@ def apply_inclusions(current_format, src_files, gen_images):
 
     return src_files, gen_images
 
-def generate_pack_mcmeta(current_format, formats, pack_description, scale, src_files):
+def generate_pack_mcmeta(current_format, scale, src_files):
     """
     Generates the pack.mcmeta file and adds it to src_files.
     Args:
         current_format (int): The current format key.
-        formats (dict): Dictionary of all available formats.
+        config.sorted_formats (dict): Dictionary of all available config.sorted_formats.
         description (str): Base description for the pack.
         scale (int): The current scale being processed.
         src_files (dict): The dictionary of files to be included in the ZIP.
@@ -463,7 +380,7 @@ def generate_pack_mcmeta(current_format, formats, pack_description, scale, src_f
 
     # Determine supported_formats range
     min_supported_format = current_format
-    for key in formats.keys():
+    for key in config.sorted_formats.keys():
         if key < current_format:
             min_supported_format = key + 1
             break
@@ -482,16 +399,16 @@ def generate_pack_mcmeta(current_format, formats, pack_description, scale, src_f
         "pack": {
             "pack_format": current_format,
             "supported_formats": [supported_formats_str],
-            "description": f"{pack_description}{check_scale(scale)}"
+            "description": f"{config.description}{check_scale(scale)}"
         }
     }
     # Convert to JSON string and then to bytes
     pack_mcmeta_content = json.dumps(pack_data, indent=4).encode('utf-8')
     # Add to src_files
     src_files[pack_mcmeta_path] = pack_mcmeta_content
-    log.verbose(f"  Generated new {pack_mcmeta_path} with pack_format {current_format} and description '{pack_description}{check_scale(scale)}")
+    log.verbose(f"  Generated new {pack_mcmeta_path} with pack_format {current_format} and description '{config.description}{check_scale(scale)}")
 
-def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file, allowed_paths, current_format):
+def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, current_format):
     """
     Create the final ready-to-use resourcepack ZIPs.
 
@@ -500,8 +417,8 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
         src_files (dict): Source files to pack
         gen_images (dict): Generated images to pack. Accepts `None`
         dpi (int): DPI value to add for gen_images. Accepts `None`
-        license_file (bool): Toggle whether to look for and include a license file
-        allowed_paths (list): List of paths relative to `src_files` to allow
+        config.license_file (bool): Toggle whether to look for and include a license file
+        config.allowed_paths (list): List of paths relative to `src_files` to allow
         current_format (int): Format number for logging purposes
     Returns:
         (bool): True if a zip was created or --dry-run is flagged
@@ -534,19 +451,19 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                 log.verbose(f"  Added scale_{scale}.png -> pack.png (DPI {dpi})")
 
             # Add license, if provided
-            if license_file and os.path.exists(license_file):
+            if config.license_file and os.path.exists(config.license_file):
                 try:
-                    zipf.write(license_file)
-                    added_files_in_zip.add(license_file)
+                    zipf.write(config.license_file)
+                    added_files_in_zip.add(config.license_file)
                     created_files += 1
-                    log.verbose(f"  Added license: {license_file}")
+                    log.verbose(f"  Added license: {config.license_file}")
                 except Exception as e:
-                    record_err(53, "license_read_error", f"Failed to read license file: {license_file}: {str(e)}")
+                    record_err(53, "license_read_error", f"Failed to read license file: {config.license_file}: {str(e)}")
 
             # Include files from src_files
             for rel_path, data in src_files.items():
                 # Check if path matches any allowed_path prefix
-                if any(rel_path.startswith(p) or rel_path == p for p in allowed_paths):
+                if any(rel_path.startswith(p) or rel_path == p for p in config.allowed_paths):
                     try:
                         zipf.writestr(rel_path, data)
                         added_files_in_zip.add(rel_path)
@@ -560,7 +477,7 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, license_file
                 if dpi in gen_images:
                     for rel_path, data in gen_images[dpi].items():
                         # Check if path matches any allowed_path prefix for generated PNGs
-                        if any(rel_path.startswith(p) or rel_path == p for p in allowed_paths):
+                        if any(rel_path.startswith(p) or rel_path == p for p in config.allowed_paths):
                             if rel_path in added_files_in_zip:
                                 record_err(None, "duplicate_png", f"Attempted to add already-existing PNG to ZIP (DPI {dpi})\n⤷ Path: {rel_path}")
                                 continue # Skip adding the duplicate
@@ -586,49 +503,35 @@ def main():
     log.info(f"{script_name} {script_ver}")
     log.info("Starting pack generation pipeline...")
 
-    ( # Load config
-        pack_name,
-        pack_description,
-        source_dir,
-        output_dir,
-        license_file,
-        allowed_paths,
-        formats,
-        svg_process_toggle,
-        scales_from_config,
-        theme_dir,
-        default_colors
-    ) = load_config(config_file)
-
-    # Validate formats
+    # Validate config.sorted_formats
     if args.format:
-        if not args.format in formats:
+        if not args.format in config.sorted_formats:
           record_err(21, "format_not_found", f"Specified format: {args.format} not present in {config_file} 'formats'")
 
     # Validate license, if provided
-    if license_file:
-        if not os.path.exists(license_file):
-            record_err(52, "license_not_found", f"License file does not exist: {license_file}")
+    if config.license_file:
+        if not os.path.exists(config.license_file):
+            record_err(52, "license_not_found", f"License file does not exist: {config.license_file}")
 
-    # Filter scales_from_config and check if args.scale is valid
-    if args.scale is not None and svg_process_toggle:
-        if args.scale in scales_from_config:
-            dpi_values_to_process = {args.scale: scales_from_config[args.scale]}
+    # Filter config.sorted_scales and check if args.scale is valid
+    if args.scale is not None and config.process_svg_images:
+        if args.scale in config.sorted_scales:
+            dpi_values_to_process = {args.scale: config.sorted_scales[args.scale]}
             log.info("")
-            log.info(f"Generating only for scale {args.scale} ({scales_from_config[args.scale]} DPI)")
+            log.info(f"Generating only for scale {args.scale} ({config.sorted_scales[args.scale]} DPI)")
         else:
             record_err(22, "scale_not_found", f"Specified scale '{args.scale}' not found in buildcfg.json")
 
     else:
-        dpi_values_to_process = scales_from_config
+        dpi_values_to_process = config.sorted_scales
 
     # src_files will be populated with the original `./src` tree.
-    src_files = scan_src_files(source_dir)
+    src_files = scan_src_files()
     # gen_images will be populated later by PNGs generated from SVGs, with the root keys as DPI.
     gen_images = defaultdict(dict)
 
     # SVG editing and PNG generation
-    if svg_process_toggle == True:
+    if config.process_svg_images == True:
         gen_images = defaultdict(dict)
         log.info("")
         log.info("Processing SVG files...")
@@ -637,9 +540,7 @@ def main():
         # Apply theme to all SVG files in src_files
         src_files = apply_theme(
             src_files,
-            theme_dir,
             args.theme,
-            default_colors
         )
 
         # Iterate over a copy of keys because we'll be modifying src_files
@@ -648,11 +549,11 @@ def main():
             dpi_values_to_process
         )
 
-    # Process formats and create ZIPs
+    # Process config.sorted_formats and create ZIPs
     log.info("")
-    log.info("Processing formats and creating ZIP archives...")
+    log.info("Processing config.sorted_formats and creating ZIP archives...")
 
-    for current_format in sorted(formats.keys(), reverse=True):
+    for current_format in config.sorted_formats.keys():
         # Break loop if current `current_format` is lower than `args.format` (Pack would have been created by the previous loop)
         if args.format is not None and current_format < args.format:
             log.verbose("")
@@ -668,7 +569,6 @@ def main():
         # with an "exclusions" list.
         src_files, gen_images = apply_exclusions(
             current_format,
-            source_dir,
             src_files,
             gen_images
         )
@@ -686,43 +586,41 @@ def main():
             log.verbose(f"  Skipping .zip creation of format: {current_format} (not the specified --format-key)")
             continue
 
-        # Only create per-scale packs if svg_process_toggle is True
-        if svg_process_toggle == True:
+        # Only create per-scale packs if config.process_svg_images is True
+        if config.process_svg_images == True:
             for scale, dpi in dpi_values_to_process.items():
-                generate_pack_mcmeta(current_format, formats, pack_description, scale, src_files)
+                generate_pack_mcmeta(current_format, scale, src_files)
 
-                zip_name = f"{pack_name}-{args.packver}-{formats[current_format]}-scale-{scale}.zip"
-                zip_path = os.path.join(output_dir, str(current_format), zip_name)
+                zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[current_format]}-scale-{scale}.zip"
+                zip_path = os.path.join(config.output_dir, str(current_format), zip_name)
+                log.debug(f"  ZIP path to write: {zip_path}")
                 create_zip_archive(
                     zip_path,
                     src_files,
                     gen_images,
                     scale,
                     dpi,
-                    license_file,
-                    allowed_paths,
                     current_format
                 )
         else: # Regular pack creation
-            generate_pack_mcmeta(current_format, formats, pack_description, None, src_files)
+            generate_pack_mcmeta(current_format, None, src_files)
 
-            zip_name = f"{pack_name}-{args.packver}-{formats[current_format]}.zip"
-            zip_path = os.path.join(output_dir, zip_name)
+            zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[current_format]}.zip"
+            zip_path = os.path.join(config.output_dir, zip_name)
+            log.debug(f"  ZIP path to write: {zip_path}")
             create_zip_archive(
                 zip_path,
                 src_files,
                 None,
                 None,
                 None,
-                license_file,
-                allowed_paths,
                 current_format
             )
 
     log.info("")
     log.info("Done!")
     if not args.dry_run:
-        log.info(f"Output available in {output_dir}")
+        log.info(f"Output available in {config.output_dir}")
     else:
         log.info("No files created (--dry-run)")
 

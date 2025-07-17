@@ -8,7 +8,6 @@ Uses argparse to parse commandline arguments. Also sets up logging.
 __version__ = "1.0.0"
 
 import argparse
-import logging
 
 # Allow args to be accessed globally
 args = None
@@ -34,6 +33,8 @@ class Args:
         parse('-d', '--dry-run', action='store_true', help='Skip writing .zip archives to disk')
         parse('-e', '--exit-error', action='store_true', help='Makes non-critical errors trigger an exit')
         parse('--debug', action='store_true', help='Adds extra formatting to log messages')
+        parse('--config-file', default='buildcfg.json', type=str,
+            help='Configuration file to use. Defaults to "buildcfg.json"')
         parse('--theme', type=str, help='Specify a theme to apply color mappings from (e.g., "--theme=nord")')
         parse('--scale', type=int, help='Generate only for a specific scale (e.g., "--scale=3" for 72DPI)')
         parse('--format', type=int, help='Generate only for a specific format key (e.g., "--format=6")')
