@@ -27,59 +27,9 @@ import modules.log
 from modules.error import record_warn, record_err, record_crit
 from modules.config import config
 from modules import (
-    stats
+    stats,
+    src
 )
-
-def scan_src_files():
-    """
-    Scans and loads all files from the source directory into a dictionary.
-    Counts different file types in the proc_stats talley.
-
-    Args:
-        config.source_dir (str): Path to the source directory to scan
-
-    Returns:
-        dict: Dictionary mapping relative paths to file contents
-    """
-    if not os.path.exists(config.source_dir):
-        record_err(11, "missing_config.source_dir", f"Missing source directory: {config.source_dir}")
-
-    src_files = {}
-    log.info("")
-    log.info(f"Scanning source directory: {config.source_dir}")
-
-    # Walk through directory tree
-    for root, dirs, files in os.walk(config.source_dir):
-        for filename in files:
-            rel_path = os.path.relpath(os.path.join(root, filename), config.source_dir)
-
-            # Convert Windows paths to Unix-style if needed
-            rel_path = rel_path.replace('\\', '/')
-
-            try:
-                with open(os.path.join(root, filename), 'rb') as f:
-                    file_content = f.read()
-
-                    # Track file extensions in talley
-                    ext = os.path.splitext(filename)[1].lower()
-                    if ext:
-                        stats.file_extensions[ext] += 1
-
-
-                    src_files[rel_path] = file_content
-                    log.debug(f"  Loaded: {rel_path}")
-
-            except Exception as e:
-                record_err(12, "file_load_error", f"Error loading {rel_path}: {str(e)}")
-                continue
-
-    # Update total files count
-    stats.talley['source_files_loaded'] = len(src_files)
-    log.info("")
-    log.info(f"Total files found: {len(src_files)}")
-
-    return src_files
-
 
 def apply_theme(src_files, theme_name):
     """
@@ -526,7 +476,7 @@ def main():
         dpi_values_to_process = config.sorted_scales
 
     # src_files will be populated with the original `./src` tree.
-    src_files = scan_src_files()
+    src_files = src.scan_src_files()
     # gen_images will be populated later by PNGs generated from SVGs, with the root keys as DPI.
     gen_images = defaultdict(dict)
 
