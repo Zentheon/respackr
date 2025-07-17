@@ -3,7 +3,7 @@
 
 # Basic script info
 script_name = "respack-genscript"
-script_ver = "v1.0.1"
+script_ver = "v2.0.0"
 script_desc = "Processes resourcepack sources and creates ready-to-use .zip files"
 
 # Native imports
