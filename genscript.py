@@ -28,129 +28,10 @@ from modules import (
     stats,
     src,
     theme,
-    svg2png
+    svg2png,
+    exclusion,
+    inclusion
 )
-
-def apply_exclusions(current_format, src_files, gen_images):
-    """
-    Applies exclusion rules to both source files and generated images.
-    Handles both file and directory paths.
-
-    Args:
-        current_format: The format key being processed
-        config.source_dir: Source directory path
-        src_files: Dictionary of original files
-        gen_images: Dictionary of generated PNGs by DPI
-
-    Returns:
-        Tuple of (modified_src_files, modified_gen_images)
-    """
-
-    # Check for and load exlusion file from src_files
-    if f"{current_format}.json" in src_files:
-        log.verbose(f"  Found exclusion list: {current_format}.json")
-        file_data = src_files[f"{current_format}.json"].decode('UTF8')
-        exclusion_data = json.loads(file_data)
-        # Normalize excluded paths
-        excluded_paths = [p.replace('\\', '/').rstrip('/') for p in exclusion_data.get('exclusions')]
-    else:
-        log.verbose(f"  {current_format}.json not found, skipping exclusions")
-        return src_files, gen_images
-
-    try:
-        for rel_path in list(src_files.keys()):
-            normalized_rel_path = rel_path.replace('\\', '/').rstrip('/')
-
-            # Check if path matches any exclusion file or directory
-            for excluded_path in excluded_paths:
-                if (normalized_rel_path == excluded_path or
-                    normalized_rel_path.startswith(f"{excluded_path}/")):
-                    if rel_path in src_files:
-                        log.debug(f"    Excluding file: {rel_path}")
-                        del src_files[rel_path]
-                    else:
-                        log.debug(f"    Skipped nonpresent entry in src_files: {rel_path}")
-
-        # Process generated PNGs across all DPI variants
-        for dpi, png_files in list(gen_images.items()):
-            for rel_path in list(png_files.keys()):
-                # Normalize excluded paths
-                normalized_rel_path = rel_path.replace('\\', '/').rstrip('/')
-
-                # Check PNG paths against exclusions
-                for excluded_path in excluded_paths:
-                    png_path = excluded_path[:-4] + '.png' if excluded_path.endswith('.svg') else excluded_path
-                    png_path = png_path.rstrip('/')
-
-                    if (normalized_rel_path == png_path or
-                        normalized_rel_path.startswith(f"{png_path}/")):
-                        if rel_path in png_files:
-                            log.debug(f"    Excluding generated PNG: {rel_path} (DPI {dpi})")
-                            del png_files[rel_path]
-                        else:
-                            log.debug(f"    Skipped nonpresent entry in gen_images: {rel_path}")
-
-    except Exception as e:
-        record_err(61, "exclusion_error", f"Error applying exclusions: {str(e)}")
-
-    return src_files, gen_images
-
-def apply_inclusions(current_format, src_files, gen_images):
-    """
-    Merges assets from format-specific directories into root source directory.
-
-    Args:
-        current_format (int): The current format key being processed.
-        src_files (dict): Dictionary of original files.
-        gen_images (defaultdict): Dictionary of generated PNGs by DPI.
-
-    Returns:
-        Tuple of (modified_src_files, modified_gen_images)
-    """
-
-    # Function to match gen_images inclusions
-    def gen_images_filter(gen_images, inclusion_dir):
-        filtered_img = {}
-        for dpi, value in gen_images.items():
-            if isinstance(value, dict):
-                sub_matches = {k: v for k, v in value.items() if k.startswith(str(inclusion_dir))}
-                if sub_matches:  # Only add if there are matches
-                    filtered_img[dpi] = sub_matches
-
-        return filtered_img
-
-    # Initial dictionaries
-    inclusion_dir = f"{current_format}/"
-    filtered_src = {k: v for k, v in src_files.items() if k.startswith(inclusion_dir)}
-    filtered_img = gen_images_filter(gen_images, inclusion_dir)
-
-    # Check if any entries were found
-    if filtered_src or filtered_img:
-        log.verbose(f"  Merging format inclusion folder: {inclusion_dir}")
-    else:
-        log.verbose(f"  Skipping merging (no inclusion folder): {inclusion_dir}")
-        return src_files, gen_images
-
-    try:
-        # Process filtered_src (src_files)
-        for rel_path, data in filtered_src.items():
-            new_rel_path = f"{rel_path[len(inclusion_dir):]}"
-            src_files[new_rel_path] = data
-            del src_files[rel_path] # Previous path is no longer needed
-            log.debug(f"    Remapped file: {rel_path} -> {new_rel_path}")
-
-        # Process filtered_img (gen_images)
-        for dpi, png_files in filtered_img.items():
-            for rel_path, data in png_files.items():
-                new_rel_path = f"{rel_path[len(inclusion_dir):]}"
-                gen_images[dpi][new_rel_path] = data
-                del gen_images[dpi][rel_path] # Previous path is no longer needed
-                log.debug(f"    Remapped gen. PNG: {rel_path} -> {new_rel_path} (DPI: {dpi})")
-
-    except Exception as e:
-        record_err(71, "inclusion_error", f"Error merging inclusions: {str(e)}")
-
-    return src_files, gen_images
 
 def generate_pack_mcmeta(current_format, scale, src_files):
     """
@@ -363,7 +244,7 @@ def main():
 
         # Check for and process a format-specific .json file in `./src`
         # with an "exclusions" list.
-        src_files, gen_images = apply_exclusions(
+        src_files, gen_images = exclusion.apply_exclusions(
             current_format,
             src_files,
             gen_images
@@ -372,7 +253,7 @@ def main():
         # Merge format-specific assets into the main assets directory, if they exist.
         # This call should happen AFTER exclusions are applied,
         # as we may want to move paths that would conflict in the place of others.
-        src_files, gen_images = apply_inclusions(
+        src_files, gen_images = inclusion.apply_inclusions(
             current_format,
             src_files,
             gen_images
