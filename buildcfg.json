@@ -9,6 +9,7 @@
     "pack.mcmeta",
     "pack.png"
   ],
+  "max_format": 10,
   "formats": {
     "64": "mc-1.21.7",
     "63": "mc-1.21.6",

@@ -1,6 +1,9 @@
 # respack-genscript-specific
 generated/
 
+# Other
+*.kate-swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

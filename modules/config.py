@@ -1,7 +1,7 @@
 # config.py
 
 # Revision of this module:
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import json
 from pathlib import Path
@@ -18,9 +18,9 @@ class ConfigLoader:
 
     def __init__(self):
         self._filepath = Path(args.config_file)
-        print(self._filepath)
+        log.debug(f"Config path: {self._filepath}")
+        # Initialize variables
         self.config = None
-        # Initialize preprocessed dicts
         self._sorted_formats = {}
         self._sorted_scales = {}
         self.load_config()
@@ -37,16 +37,20 @@ class ConfigLoader:
 
             # Convert nested dictionaries into SimpleNamespace objects
             self.config = json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
+            log.trace("Loaded SimpleNamespace config:")
+            log.trace(self.config)
 
-        except json.JSONDecodeError as e:
-            record_crit(6, "invalid_config", f"Invalid JSON in config file: {e}")
-        except Exception as e:
-            record_crit(5, "config_load_fail", f"Failed to load config: {e}")
+        except json.JSONDecodeError as err:
+            record_crit(6, "invalid_config", f"Invalid JSON in config file: {str(err)}")
+        except Exception as err:
+            record_crit(5, "config_load_fail", f"Failed to load config: {str(err)}")
 
     def __getattr__(self, key):
         # Allows dot notation access
         if not hasattr(self.config, key):
+            # Throw an error if the key doesn't exist
             record_crit(7, "config_key_missing", f"Key '{key}' not found in config")
+        log.trace(f"Accessed key {key}")
         return getattr(self.config, key)
 
     # Preprocessed items that can be accessed the same as dynamically loaded entries
@@ -82,10 +86,12 @@ class ConfigLoader:
         # Get allowed paths
         log.info(f"  Allowed path in output packs: {self.allowed_paths}")
 
+        # Get max format addend
+        log.info(f"  Most recent format compatibility buffer: {int(self.max_format)}")
+
         # Get format data
         formats_data = {int(k): v for k, v in self.formats.__dict__.items()}
         self._sorted_formats = dict(sorted(formats_data.items(), reverse=True))
-
         log.info("  Formats:")
         for k in self._sorted_formats.keys():
             log.info(f"    {k}: {self._sorted_formats[k]}")
@@ -93,7 +99,6 @@ class ConfigLoader:
         # Get svg processing toggle
         log.info(f"  SVG processing is set to: {self.process_svg_images}")
 
-        print(self.scales)
         # SVG processing-specific
         if self.process_svg_images == True:
             # Get scale mappings
@@ -102,7 +107,7 @@ class ConfigLoader:
             log.info(f"  Scale mappings: {list(self._sorted_scales.keys())}")
 
             # Get theme dir
-            log.info(f"  Output directory: {self.theme_dir}")
+            log.info(f"  Theme directory: {self.theme_dir}")
 
             # Get default color mappings
             self._color_map = {k: v for k, v in self.default_colors.__dict__.items()}
