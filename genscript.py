@@ -76,10 +76,7 @@ def main():
         src_files = theme.apply_theme(src_files)
 
         # Iterate over a copy of keys because we'll be modifying src_files
-        gen_images = svg2png.convert_svg_to_png(
-            src_files,
-            dpi_values
-        )
+        gen_images = svg2png.convert_svg_to_png(src_files)
 
     # Process config.sorted_formats and create ZIPs
     log.info("")

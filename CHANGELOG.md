@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `src.py 1.0.1`: Various cleanup and fixes.
 - `config.py 1.0.1`: Various cleanup and fixes.
 - `makezip.py 1.0.2`: Various cleanup and fixes.
+- `svg2png.py 1.0.1`: Various cleanup and fixes.
 - `theme.py 1.0.1`: Various cleanup. More error handling.
 - `exclusion.py 1.0.1`: Various cleanup. More error handling.
 - `inclusion.py 1.0.1`: Various cleanup. More error handling.
