@@ -50,7 +50,7 @@ class ConfigLoader:
         if not hasattr(self.config, key):
             # Throw an error if the key doesn't exist
             record_crit(7, "config_key_missing", f"Key '{key}' not found in config")
-        log.trace(f"Accessed key {key}")
+        log.trace(f"Accessed key config.{key}")
         return getattr(self.config, key)
 
     # Preprocessed items that can be accessed the same as dynamically loaded entries
