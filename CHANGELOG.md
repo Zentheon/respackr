@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - `--debug` didn't work because of a tiny error with `modules/log.py` (1.0.0 -> 1.0.1)
+- `genscript.py`: Some cleanup
 - `config.py 1.0.1`: Various cleanup and fixes.
+- `makezip.py 1.0.2`: Various cleanup and fixes.
 - `exclusion.py 1.0.1`: Various cleanup. More error handling.
 - `inclusion.py 1.0.1`: Various cleanup. More error handling.
 

@@ -51,14 +51,14 @@ def main():
     # Filter config.sorted_scales and check if args.scale is valid
     if args.scale is not None and config.process_svg_images:
         if args.scale in config.sorted_scales:
-            dpi_values_to_process = {args.scale: config.sorted_scales[args.scale]}
+            dpi_values = {args.scale: config.sorted_scales[args.scale]}
             log.info("")
             log.info(f"Generating only for scale {args.scale} ({config.sorted_scales[args.scale]} DPI)")
         else:
             record_err(22, "scale_not_found", f"Specified scale '{args.scale}' not found in buildcfg.json")
 
     else:
-        dpi_values_to_process = config.sorted_scales
+        dpi_values = config.sorted_scales
 
     # src_files will be populated with the original `./src` tree.
     src_files = src.scan_src_files()
@@ -81,29 +81,29 @@ def main():
         # Iterate over a copy of keys because we'll be modifying src_files
         gen_images = svg2png.convert_svg_to_png(
             src_files,
-            dpi_values_to_process
+            dpi_values
         )
 
     # Process config.sorted_formats and create ZIPs
     log.info("")
     log.info("Processing config.sorted_formats and creating ZIP archives...")
 
-    for current_format in config.sorted_formats.keys():
-        # Break loop if current `current_format` is lower than `args.format` (Pack would have been created by the previous loop)
-        if args.format is not None and current_format < args.format:
+    for cur_fmt in config.sorted_formats.keys():
+        # Break loop if current cur_fmt is lower than `args.format` (Pack would have been created by the previous loop)
+        if args.format is not None and cur_fmt < args.format:
             log.verbose("")
-            log.verbose(f"Ending processing as current format {current_format} is lower than specified --format-key {args.format}")
+            log.verbose(f"Ending processing as current format {cur_fmt} is lower than specified --format-key {args.format}")
             break
 
         stats.talley['formats_processed'] += 1
 
         log.verbose("")
-        log.verbose(f"Processing format: {current_format}")
+        log.verbose(f"Processing format: {cur_fmt}")
 
         # Check for and process a format-specific .json file in `./src`
         # with an "exclusions" list.
         src_files, gen_images = exclusion.apply_exclusions(
-            current_format,
+            cur_fmt,
             src_files,
             gen_images
         )
@@ -112,35 +112,34 @@ def main():
         # This call should happen AFTER exclusions are applied,
         # as we may want to move paths that would conflict in the place of others.
         src_files, gen_images = inclusion.apply_inclusions(
-            current_format,
+            cur_fmt,
             src_files,
             gen_images
         )
         # Skip zip creation if format flag is given and not matching current pass.
-        if args.format is not None and current_format != args.format:
-            log.verbose(f"  Skipping .zip creation of format: {current_format} (not the specified --format-key)")
+        if args.format is not None and cur_fmt != args.format:
+            log.verbose(f"  Skipping .zip creation of format: {cur_fmt} (not the specified --format-key)")
             continue
 
         # Only create per-scale packs if config.process_svg_images is True
         if config.process_svg_images == True:
-            for scale, dpi in dpi_values_to_process.items():
-                mcmeta.generate_pack_mcmeta(current_format, scale, src_files)
+            for scale, dpi in dpi_values.items():
+                mcmeta.generate_pack_mcmeta(cur_fmt, scale, src_files)
 
-                zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[current_format]}-scale-{scale}.zip"
-                zip_path = os.path.join(config.output_dir, str(current_format), zip_name)
+                zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[cur_fmt]}-scale-{scale}.zip"
+                zip_path = os.path.join(config.output_dir, str(cur_fmt), zip_name)
                 log.debug(f"  ZIP path to write: {zip_path}")
                 makezip.create_zip_archive(
                     zip_path,
                     src_files,
                     gen_images,
                     scale,
-                    dpi,
-                    current_format
+                    cur_fmt
                 )
         else: # Regular pack creation
-            mcmeta.generate_pack_mcmeta(current_format, None, src_files)
+            mcmeta.generate_pack_mcmeta(cur_fmt, None, src_files)
 
-            zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[current_format]}.zip"
+            zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[cur_fmt]}.zip"
             zip_path = os.path.join(config.output_dir, zip_name)
             log.debug(f"  ZIP path to write: {zip_path}")
             makezip.create_zip_archive(
@@ -148,8 +147,7 @@ def main():
                 src_files,
                 None,
                 None,
-                None,
-                current_format
+                cur_fmt
             )
 
     log.info("")
