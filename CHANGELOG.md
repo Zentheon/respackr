@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- `mcmeta.py 2.0.0`: Rewritten to instead read and process an input template.
 - `error.py 1.1.0`: Generally improved logic and log handling.
 - `arguments.py 1.0.1`: Remove unnecessary `get_args` helper function.
  
