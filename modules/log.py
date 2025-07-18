@@ -1,7 +1,7 @@
 # log.py
 
 # Revision of this module:
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import logging
 from modules.arguments import args
@@ -35,7 +35,7 @@ class LogInit:
     def set_format(self):
         if args.debug:
             self.fmt = '%(asctime)s:%(name)s:%(levelname)s: %(message)s'
-            return(fmt)
+            return(self.fmt)
         else:
             self.fmt = '%(messages)s'
 

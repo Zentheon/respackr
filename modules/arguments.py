@@ -5,14 +5,12 @@ Uses argparse to parse commandline arguments. Also sets up logging.
 """
 
 # Revision of this module:
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import argparse
 
 # Allow args to be accessed globally
 args = None
-def get_args():
-    return args
 
 # Main class
 class Args:

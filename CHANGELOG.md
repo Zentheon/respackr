@@ -8,10 +8,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased] - yyyy-mm-dd
  
 ### Added
- 
+
+- `--debug` flag will now print out error stacktraces. 
+
 ### Changed
+
+- `error.py 1.1.0`: Generally improved logic and log handling.
+- `arguments.py 1.0.1`: Remove unnecessary `get_args` helper function.
  
 ### Fixed
+
+- `--debug` didn't work because of a tiny error with `modules/log.py` (1.0.0 -> 1.0.1)
  
 ## [2.0.0] - 2025-07-16
  

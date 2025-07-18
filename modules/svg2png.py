@@ -1,7 +1,7 @@
 # svg2png.py
 
 # Revision of this module:
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import logging as log
 from collections import defaultdict
@@ -89,7 +89,7 @@ def convert_svg_to_png(src_files, dpi_values_to_process):
                 del src_files[rel_path]
 
             except Exception as e:
-                record_err(41, "svg_processing_error", f"Error creating image for SVG: {str(e)}\n⤷ At: {rel_path}")
+                record_err(41, "svg_processing_error", f"Error creating image for SVG: {str(e)}", f"⤷ At: {rel_path}")
 
     log.verbose("")
     log.verbose(f"Total images created: {svg_talley['png_files_generated']}")

@@ -1,7 +1,7 @@
 # makezip.py
 
 # Revision of this module:
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import logging as log
 import zipfile
@@ -83,7 +83,9 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, current_form
                         # Check if path matches any allowed_path prefix for generated PNGs
                         if any(rel_path.startswith(p) or rel_path == p for p in config.allowed_paths):
                             if rel_path in added_files_in_zip:
-                                record_err(None, "duplicate_png", f"Attempted to add already-existing PNG to ZIP (DPI {dpi})\n⤷ Path: {rel_path}")
+                                record_err(None, "duplicate_png",
+                                    f"Attempted to add already-existing PNG to ZIP (DPI {dpi})",
+                                    f"⤷ Path: {rel_path}")
                                 continue # Skip adding the duplicate
                             try:
                                 zipf.writestr(rel_path, data)
@@ -91,7 +93,9 @@ def create_zip_archive(zip_path, src_files, gen_images, scale, dpi, current_form
                                 created_files += 1
                                 log.debug(f"  Added gen. PNG to ZIP (DPI {dpi}): {rel_path}")
                             except Exception as e:
-                                record_err(None, "zip_write_error", f"Error writing generated PNG to ZIP: {str(e)}\n⤷ Path: {rel_path}")
+                                record_err(None, "zip_write_error",
+                                    f"Error writing generated PNG to ZIP: {str(e)}",
+                                    f"⤷ Path: {rel_path}")
 
         if created_files > 0:
             talley['archives_created'] += 1
