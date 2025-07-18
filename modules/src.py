@@ -1,7 +1,7 @@
 # src.py
 
 # Revision of this module:
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import os
 import logging as log
@@ -13,17 +13,14 @@ from modules.error import record_warn, record_err, record_crit
 
 def scan_src_files():
     """
-    Scans and loads all files from the source directory into a dictionary.
+    Scans and loads all files from the configured source directory into a dictionary.
     Counts different file types in the proc_stats talley.
-
-    Args:
-        config.source_dir (str): Path to the source directory to scan
 
     Returns:
         dict: Dictionary mapping relative paths to file contents
     """
     if not os.path.exists(config.source_dir):
-        record_err(11, "missing_config.source_dir", f"Missing source directory: {config.source_dir}")
+        record_crit(11, "missing_source_dir", f"Missing source directory: {config.source_dir}")
 
     src_files = {}
     log.info("")
@@ -34,7 +31,7 @@ def scan_src_files():
         for filename in files:
             rel_path = os.path.relpath(os.path.join(root, filename), config.source_dir)
 
-            # Convert Windows paths to Unix-style if needed
+            # Normalize paths
             rel_path = rel_path.replace('\\', '/')
 
             try:
@@ -46,12 +43,11 @@ def scan_src_files():
                     if ext:
                         file_extensions[ext] += 1
 
-
                     src_files[rel_path] = file_content
                     log.debug(f"  Loaded: {rel_path}")
 
-            except Exception as e:
-                record_err(12, "file_load_error", f"Error loading {rel_path}: {str(e)}")
+            except Exception as err:
+                record_err(12, "file_load_error", f"Error loading {rel_path}: {str(err)}")
                 continue
 
     # Update total files count

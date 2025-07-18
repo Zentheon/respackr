@@ -73,10 +73,7 @@ def main():
         svg_files_processed = 0
 
         # Apply theme to all SVG files in src_files
-        src_files = theme.apply_theme(
-            src_files,
-            args.theme,
-        )
+        src_files = theme.apply_theme(src_files)
 
         # Iterate over a copy of keys because we'll be modifying src_files
         gen_images = svg2png.convert_svg_to_png(
