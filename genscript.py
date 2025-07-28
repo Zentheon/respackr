@@ -8,7 +8,6 @@ script_desc = "Processes resourcepack sources and creates ready-to-use .zip file
 
 # Native imports
 import os
-import json
 import logging as log
 from collections import defaultdict
 
@@ -38,28 +37,6 @@ def main():
     log.info(f"{script_name} {script_ver}")
     log.info("Starting pack generation pipeline...")
 
-    # Validate config.sorted_formats
-    if args.format:
-        if not args.format in config.sorted_formats:
-          record_err(21, "format_not_found", f"Specified format: {args.format} not present in {config_file} 'formats'")
-
-    # Validate license, if provided
-    if config.license_file:
-        if not os.path.exists(config.license_file):
-            record_err(52, "license_not_found", f"License file does not exist: {config.license_file}")
-
-    # Filter config.sorted_scales and check if args.scale is valid
-    if args.scale is not None and config.process_svg_images:
-        if args.scale in config.sorted_scales:
-            dpi_values = {args.scale: config.sorted_scales[args.scale]}
-            log.info("")
-            log.info(f"Generating only for scale {args.scale} ({config.sorted_scales[args.scale]} DPI)")
-        else:
-            record_err(22, "scale_not_found", f"Specified scale '{args.scale}' not found in buildcfg.json")
-
-    else:
-        dpi_values = config.sorted_scales
-
     # src_files will be populated with the original `./src` tree.
     src_files = src.scan_src_files()
     # gen_images will be populated later by PNGs generated from SVGs, with the root keys as DPI.
@@ -70,7 +47,6 @@ def main():
         gen_images = defaultdict(dict)
         log.info("")
         log.info("Processing SVG files...")
-        svg_files_processed = 0
 
         # Apply theme to all SVG files in src_files
         src_files = theme.apply_theme(src_files)
@@ -80,7 +56,7 @@ def main():
 
     # Process config.sorted_formats and create ZIPs
     log.info("")
-    log.info("Processing config.sorted_formats and creating ZIP archives...")
+    log.info("Processing formats and creating ZIP archives...")
 
     for cur_fmt in config.sorted_formats.keys():
         # Break loop if current cur_fmt is lower than `args.format` (Pack would have been created by the previous loop)
@@ -117,7 +93,7 @@ def main():
 
         # Only create per-scale packs if config.process_svg_images is True
         if config.process_svg_images == True:
-            for scale, dpi in dpi_values.items():
+            for scale, dpi in config.sorted_scales.items():
                 mcmeta.generate_pack_mcmeta(cur_fmt, scale, src_files)
 
                 zip_name = f"{config.name}-{args.packver}-{config.sorted_formats[cur_fmt]}-scale-{scale}.zip"

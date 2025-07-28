@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - `mcmeta.py 2.0.0`: Rewritten to instead read and process an input template.
 - `error.py 1.1.0`: Generally improved logic and log handling.
+- `config.py 1.1.0` Moved over some config/args validation from genscript.py and added type checking for entries.
 - `arguments.py 1.0.1`: Remove unnecessary `get_args` helper function.
 - `arguments 1.1.0`: Improve help message.
  
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `genscript.py`: Some cleanup
 - `src.py 1.0.1`: Various cleanup and fixes.
 - `config.py 1.0.1`: Various cleanup and fixes.
+- `config.py 1.1.0`: Optional config values are handled properly now.
 - `makezip.py 1.0.2`: Various cleanup and fixes.
 - `svg2png.py 1.0.1`: Various cleanup and fixes.
 - `theme.py 1.0.1`: Various cleanup. More error handling.
