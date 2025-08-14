@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "respackr"
 version = "2.1.0"
-description = "Easily create respacks for multiple Minecraft: Java Edition versions."
+description = "Easily create resourcepacks for multiple Minecraft: Java Edition versions."
 authors = ["Zentheon <zentheon@mailbox.org>"]
 homepage = "https://github.com/zentheon/respackr"
 license = "GPL-3.0"
@@ -10,6 +10,9 @@ include = [
     { path = "respackr/spec.toml", format = ["sdist", "wheel"] }
 ]
 
+[tool.poetry.scripts]
+respackr = "respackr:main"
+
 [tool.poetry.dependencies]
 python = "^3.12"
 termaconfig = "^1.0.0"
@@ -17,13 +20,13 @@ numpy = "^2.3.2"
 cairosvg = "^2.8.2"
 pillow = "^11.3.0"
 requests = "^2.32.4"
+click = "^8.2.1"
 
 [tool.ruff]
 # Default of 88 is a little low.
 line-length = 100
 
 [tool.pyright]
-venvPath = "./venv"
 venv = "venv"
 include = ["modules", "respackr"]
 
