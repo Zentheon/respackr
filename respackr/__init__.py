@@ -5,23 +5,18 @@ __version__ = "3.0.0"
 __authors__ = ["Zentheon <zentheon@mailbox.org>"]
 __license__ = "GPL-3.0"
 
-import logging as log
-
 import click
 
-log.basicConfig(
-    level=log.INFO,
-    format="%(asctime)s:%(name)s:%(levelname)s: %(message)s",
-    datefmt="%H:%M:%S",
-)
+from respackr.logger import logging_init
 
 
+# cli group and global opts
 @click.group(epilog="Try 'respackr help COMMAND' for get info more about a specific command.")
 @click.option(
     "-v",
     "--verbose",
     count=True,
-    help="Increase verbosity level (-v=VERBOSE, -vv=DEBUG, -vvv=TRACE).",
+    help="Increase verbosity level (-v=DEBUG, -vv=VOMIT).",
 )
 @click.option(
     "-q",
@@ -30,14 +25,43 @@ log.basicConfig(
     help="Run with less feedback (-q=MINIMAL, -qq=NOTHING).",
 )
 @click.option(
-    "--debug",
-    is_flag=True,
-    help="Adds extra formatting and error tracebacks to log messages.",
+    "-d",
+    "--debug-filter",
+    type=str,
+    multiple=True,
+    help="Sets log level to DEBUG and adds extra ouput based on category.",
 )
 def cli(**clargs):
-    pass
+    current_loglevel = "info"
+    debug_filter = []
+
+    global glargs
+    glargs = clargs
+
+    # Calculate log settings from clargs
+    if clargs["verbose"] == 0:
+        current_loglevel = "info"
+    elif clargs["verbose"] == 1:
+        current_loglevel = "debug"
+    else:
+        debug_filter = ["all"]
+
+    for filter in clargs["debug_filter"]:
+        debug_filter.append(filter)
+
+    if debug_filter:
+        current_loglevel = "debug"
+
+    if clargs["quiet"] == 1:
+        current_loglevel = "warning"
+    if clargs["quiet"] >= 1:
+        current_loglevel = "critical"
+
+    global log
+    log = logging_init("respackr_logger", current_loglevel, debug_filter)
 
 
+# Alternate help command
 # Blank string seems to disable the help argument entirely
 @cli.command(context_settings={"help_option_names": ""})
 @click.argument("command_name", metavar="COMMAND", required=False)
