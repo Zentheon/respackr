@@ -4,6 +4,14 @@
 
 ![Banner](./banner.png)
 
+# NOTE: Project overhaul
+
+The codebase is currently undergoing a total rewrite with most features getting major breaking changes.
+
+I overlooked a few key (modern) resourcepack features when initially working on this project that would require some fundamental changes to implement, namely `overlays` and `supported_formats`. Besides that, I've already learned a lot more stuff that's going to be put towards creating way cleaner implementations.
+
+TLDR: This tool is not ready to be used yet, but check back for updates!
+
 # About
 
 This project originated out of necessity for a better solution to the problem of supporting many Minecraft versions in a GUI resourcepack I maintain, [Dracula Theme](https://github.com/dracula/minecraft) (soon to be rebranded). At the time, I implemented it as a Bash script with many quirks and limitations. It worked well for what it was, but it had potential to be better...
@@ -45,7 +53,7 @@ Speaking of `buildcfg.json`, this file contains various configuration parameters
 
 #### SVG processing-specific:
 
-- `process_svg_images`: If `true`, the script will enable extra features for processing vector graphics. If `false`, all other related settings remain unloaded and can be omitted. 
+- `process_svg_images`: If `true`, the script will enable extra features for processing vector graphics. If `false`, all other related settings remain unloaded and can be omitted.
 - `scales`: Dictionary of `scale: dpi` mappings to use. Resourcepacks are created in subdirectories for each format if `process_svg_images` is true.
 - `theme_dir`: Directory path that the script will look for theme files in.
 - `default_colors`: `color name: hex code` mappings. When a theme is provided, the script will search for these codes and replace them with ones in the theme file with the same name.
@@ -89,7 +97,7 @@ And of course, bug reports and general feature requests are always welcome as we
 ## Resources
 
 - Come hang out and share cool stuff with the community on [Discord](https://discord.gg/3gtNAQgv2G)!
-- [Installing resourcepacks (wiki page)](https://minecraft.wiki/w/Tutorials/Loading_a_resource_pack) 
+- [Installing resourcepacks (wiki page)](https://minecraft.wiki/w/Tutorials/Loading_a_resource_pack)
 
 ## License
 
