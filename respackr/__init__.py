@@ -9,6 +9,8 @@ import click
 
 from respackr.logger import logging_init
 
+SPEC_FILE = "respackr/spec.toml"
+
 
 # cli group and global opts
 @click.group(epilog="Try 'respackr help COMMAND' for get info more about a specific command.")
@@ -30,6 +32,12 @@ from respackr.logger import logging_init
     type=str,
     multiple=True,
     help="Sets log level to DEBUG and adds extra ouput based on category.",
+)
+@click.option(
+    "--config-file",
+    default="respackr.toml",
+    metavar="PATH",
+    help="Specify a different path to a config file.",
 )
 def cli(**clargs):
     current_loglevel = "info"
@@ -91,7 +99,9 @@ def help(command_name):
 
 def main():
     from respackr.generate.main import generate
+    from respackr.info import ascii
 
+    ascii = ascii
     generate = generate
 
     cli()

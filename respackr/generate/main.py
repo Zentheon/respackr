@@ -4,16 +4,10 @@ import click
 from termaconfig import ConfigValidationError, TermaConfig
 from terminaltables3 import DoubleTable
 
-from respackr import cli
+from respackr import ascii, cli, SPEC_FILE
 
 
 @cli.command()
-@click.option(
-    "--config-file",
-    default="respackr.toml",
-    metavar="PATH",
-    help="Specify a different path to a config file.",
-)
 @click.option(
     "-d",
     "--dry-run",
@@ -49,19 +43,23 @@ from respackr import cli
 )
 def generate(**clargs):
     """Generates zipped resourcepacks, ready to publish or use in-game"""
+    # Load global args after cli has been initialized
+    from respackr import glargs
 
-    spec_path = "respackr/spec.toml"
+    logo_lines = ascii.assemble_logo()
+    for line in logo_lines:
+        click.echo(line)
 
-    print(clargs)
-    config_file = clargs["config_file"]
+    config_file = glargs["config_file"]
 
     global config
 
     try:
-        config = TermaConfig(config_file, spec_path, tabletype=DoubleTable, logging=False)
+        config = TermaConfig(config_file, SPEC_FILE, tabletype=DoubleTable, logging=False)
     except ConfigValidationError:
         print()
         print("Errors are present in configuration. Exiting...")
         exit()
 
     print("Testing config:", config["pack"])
+    print(clargs)
