@@ -5,6 +5,7 @@ from termaconfig import ConfigValidationError, TermaConfig
 from terminaltables3 import DoubleTable
 
 from respackr import SPEC_FILE, ascii, cli
+from respackr.generate import sources
 
 
 @cli.command()
@@ -64,3 +65,8 @@ def generate(**clargs):
 
     print("Testing config:", config["pack"])
     print(clargs)
+
+    src_files = sources.SourceLoader(str(config["pack"]["source_path"]))
+    src_files.load_sources()
+    print(src_files["2.json"])
+    print("Filetypes:", src_files.filetypes)
