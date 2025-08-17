@@ -1,4 +1,4 @@
-# respackr/generate/main.py
+# respackr/generate/__init__.py
 
 import click
 from termaconfig import ConfigValidationError, TermaConfig

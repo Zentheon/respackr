@@ -73,7 +73,7 @@ def cli(**clargs):
 
 
 def main():
-    from respackr.generate.main import generate
+    from respackr.generate import generate
     from respackr.info import ascii, help, info
 
     ascii = ascii
