@@ -7,9 +7,12 @@ __license__ = "GPL-3.0"
 
 import click
 
-from respackr.logger import logging_init
+from respackr.logger import LogWrapper
 
 SPEC_FILE = "respackr/spec.toml"
+
+# Initialize logging
+log = LogWrapper("respackr")
 
 
 # cli group and global opts
@@ -65,8 +68,7 @@ def cli(**clargs):
     if clargs["quiet"] >= 1:
         current_loglevel = "critical"
 
-    global log
-    log = logging_init("respackr_logger", current_loglevel, debug_filter)
+    log.settings(log.name, current_loglevel, debug_filter, False)
 
 
 # Alternate help command
