@@ -1,0 +1,61 @@
+[pack]
+# Used for naming .zip files
+name = "example-pack"
+source_path = "./src"
+output_path = "./resourcepacks"
+# Path to a license file outside of the src dir. Makes it so
+# you don't have to include a copy with the pack sources
+license_path = "LICENSE"
+# Paths/files in your source dir that will be included in packs.
+allowed_paths = "'assets/', 'pack.mcmeta', 'pack.png'"
+future_compatibility = 15
+
+[optimize]
+# !! Currently unimplemented
+# Optimally compresses PNG images. Can significantly
+# impact generation time for larger packs.
+png = true
+# Minify pack json files. Low impact on generation time
+# and can a save noticeable amount for model-heavy packs.
+json = true
+# Minify mcmeta (json) files. low impact on generation time.
+mcmeta = true
+
+[theming]
+# Alternatively remove this entire [theming] section to
+# disable the functionality
+enabled = true
+# Directory with {theme}.json files
+# See [colormap] section for default colors
+themes_path = "./themes"
+[[colormap]]
+primary = "#282a36"
+secondary = "#1e1f29"
+accent = "#2e3242"
+background = "#ecf0f1"
+text = "#2c3e50"
+
+[svg2png]
+# Alternatively remove the entire [svg2png] section to
+# disable the functionality
+enabled = true
+[[scales]]
+2 = 24
+3 = 72
+4 = 96
+
+[formats]
+0 = "mc-1.6.1-1.7.10"
+1 = "mc-1.8-1.8.9"
+2 = "mc-1.9–1.10.2"
+3 = "mc-1.11–1.12.2"
+4 = "mc-1.13–1.14.4"
+5 = "mc-1.15–1.16.1"
+6 = "mc-1.16.2–1.16.5"
+7 = "mc-1.17–1.17.1"
+8 = "mc-1.18–1.18.2"
+9 = "mc-1.19–1.19.2"
+12 = "mc-1.19.3"
+13 = "mc-1.19.4"
+15 = "mc-1.20–1.20.1"
+64 = "mc-1.21.7"

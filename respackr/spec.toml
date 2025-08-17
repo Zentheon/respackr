@@ -1,0 +1,76 @@
+# This uses the ConfigObj spec format with one key difference:
+# the '@' symbol is used as a delimiter for special formatting of
+# entries when they get printed out. The valid options are:
+#
+# Section options:
+# @title {str}: Name of the table that will be printed. Also used in other options
+#   like @type.
+# @header {list}: Adds a header. Should contain up to 3 list items for the names.
+# @type {type}: How the entries in the section are interpreted:
+#   list_keys: Merges all config keys into one entry.
+#   list_values: Merges all values from config to one entry.
+#   list_all: Merges both keys and values: 'key1 (value1), key2, (value2)'
+# @parent {section}: dot notated path of another section to merge the table into.
+# @ignore {bool}: Whether to completely ignore handling tables for the section.
+# @toggle {option key}: Point to a boolean key in a dot-notated path of any
+#   option that acts as @ignore if false.
+#
+# Per-item options:
+# {option}@title {str}: Pretty name to use in place of the technical one.
+# {option}@note {str}: Optional third column entry. Currently unused.
+# {option}@ignore {str}: Same as for sections but per-option.
+
+[pack]
+__title = "Configuration"
+name = "string(default='example-pack')"
+name__title = "Pack Name"
+source_path = "string(default='./src')"
+source_path__title = "Resourcepack sources"
+output_path = "string(default='./resourcepacks')"
+output_path__title = "Output directory"
+license_path = "string(default=None)"
+license_path__title = "License file"
+allowed_paths = "list(default=list('assets/', 'pack.mcmeta', 'pack.png'))"
+allowed_paths__title = "Allowed paths"
+future_compatibility = "integer(min=1, max=500, default=25)"
+future_compatibility__title = "Future compatibility"
+
+[optimize]
+__parent = "pack"
+__title = "Optimize files:"
+png = "boolean(default=false)"
+png__title = "│ PNG"
+json = "boolean(default=false)"
+json__title = "│ JSON"
+mcmeta = "boolean(default=false)"
+mcmeta__title = "│ MCMETA"
+
+[theming]
+__title = "Pack theming"
+enabled = "boolean(default=false)"
+enabled__title = "Theming enabled"
+theme_dir = "string(default='./themes')"
+[[colormap]]
+__parent = "theming"
+primary = "string(default='#ffffff')"
+secondary = "string(default='#ffffff')"
+accent = "string(default='#ffffff')"
+background = "string(default='#ffffff')"
+
+[svg2png]
+__parent = "pack"
+__toggle = "svg2png.enabled"
+enabled = "boolean(default=false)"
+enabled__title = "SVG processing"
+[[scales]]
+__parent = "pack"
+__toggle = "svg2png.enabled"
+__title = "Scales"
+__type = "list_values"
+2 = "integer(1, 500, default=48)"
+3 = "integer(1, 500, default=72)"
+4 = "integer(1, 500, default=96)"
+
+[formats]
+__ignore = true
+# Format configuration is to be reworked
