@@ -1,9 +1,8 @@
 # respackr/ascii.py
 
+"""Mappings of logo ascii art and other fun little things"""
 
 from respackr import __version__
-
-"""Mappings of logo ascii art and other fun little things"""
 
 MINECART = r"""
 _|▔▔▔▔▔▔▔|

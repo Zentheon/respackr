@@ -1,5 +1,7 @@
 # respackr/info.py
 
+"""Miscelaneous info-related subcommands."""
+
 import click
 from termaconfig import ConfigValidationError, TermaConfig
 from terminaltables3 import DoubleTable
@@ -12,6 +14,7 @@ from respackr.ascii import assemble_logo
 def ascii():
     """Simply prints out the fun ascii-ified logo and version number."""
     logo_lines = assemble_logo()
+    click.echo()
     for line in logo_lines:
         click.echo(line)
 
@@ -23,6 +26,7 @@ def info():
     from respackr import glargs
 
     logo_lines = assemble_logo()
+    click.echo()
     for line in logo_lines:
         click.echo(line)
 

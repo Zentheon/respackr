@@ -1,25 +1,3 @@
-# This uses the ConfigObj spec format with one key difference:
-# the '@' symbol is used as a delimiter for special formatting of
-# entries when they get printed out. The valid options are:
-#
-# Section options:
-# @title {str}: Name of the table that will be printed. Also used in other options
-#   like @type.
-# @header {list}: Adds a header. Should contain up to 3 list items for the names.
-# @type {type}: How the entries in the section are interpreted:
-#   list_keys: Merges all config keys into one entry.
-#   list_values: Merges all values from config to one entry.
-#   list_all: Merges both keys and values: 'key1 (value1), key2, (value2)'
-# @parent {section}: dot notated path of another section to merge the table into.
-# @ignore {bool}: Whether to completely ignore handling tables for the section.
-# @toggle {option key}: Point to a boolean key in a dot-notated path of any
-#   option that acts as @ignore if false.
-#
-# Per-item options:
-# {option}@title {str}: Pretty name to use in place of the technical one.
-# {option}@note {str}: Optional third column entry. Currently unused.
-# {option}@ignore {str}: Same as for sections but per-option.
-
 [pack]
 __title = "Configuration"
 name = "string(default='example-pack')"

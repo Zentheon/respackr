@@ -12,11 +12,11 @@ from respackr.logger import LogWrapper
 SPEC_FILE = "respackr/spec.toml"
 
 # Initialize logging
-log = LogWrapper("respackr")
+log = LogWrapper("respackr_log")
 
 
 # cli group and global opts
-@click.group(epilog="Try 'respackr help COMMAND' for get info more about a specific command.")
+@click.group(epilog="Try 'respackr help COMMAND' to get more info about a specific command.")
 @click.option(
     "-v",
     "--verbose",
@@ -43,6 +43,7 @@ log = LogWrapper("respackr")
     help="Specify a different path to a config file.",
 )
 def cli(**clargs):
+    """Main commandline interface group that gathers basic args and configures logging."""
     current_loglevel = "info"
     debug_filter = []
 

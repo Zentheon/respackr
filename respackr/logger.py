@@ -1,5 +1,7 @@
 # respackr/logger.py
 
+"""Houses all the setup and handling of logs, built upon Structlog."""
+
 import logging
 import typing
 
@@ -191,7 +193,7 @@ class LogWrapper:
         self.settings(name, level, filter, format_json)
 
     def settings(self, name: str, level: int | str, filter: list, format_json: bool):
-        """Recreate loggers with new settings.
+        """Recreate the logger with new settings.
 
         Args:
             name (str): What to name the loggers. Will be suffixed with '_toconsole' or '_tofile'
@@ -227,7 +229,7 @@ class LogWrapper:
         self.format_json = format_json
 
     def set_level(self, level: int | str):
-        """Sets the level to filter messages by."""
+        """Sets the loglevel to filter messages by."""
         self.settings(self.name, level, self.filter, self.format_json)
 
     def set_filter(self, filter: list):
@@ -249,24 +251,25 @@ class LogWrapper:
         return event_dict
 
     def set_json_output(self, format_json: bool):
+        """Sets whether to use pretty formatting (False) or structured json (True)"""
         self.settings(self.name, self.level, self.filter, format_json)
 
     def debug(self, *args, **kwargs):
-        """Logs to console and output file (if provided) with level 'debug'"""
+        """Logs to the configured logger with level 'debug'"""
         self.logger.debug(*args, **kwargs)
 
     def info(self, *args, **kwargs):
-        """Logs to console and output file (if provided) with level 'info'"""
+        """Logs to the configured logger with level 'info'"""
         self.logger.info(*args, **kwargs)
 
     def warn(self, *args, **kwargs):
-        """Logs to console and output file (if provided) with level 'warning'"""
+        """Logs to the configured logger with level 'warning'"""
         self.logger.warn(*args, **kwargs)
 
     def error(self, *args, **kwargs):
-        """Logs to console and output file (if provided) with level 'error'"""
+        """Logs to the configured logger with level 'error'"""
         self.logger.error(*args, **kwargs)
 
     def critical(self, *args, **kwargs):
-        """Logs to console and output file (if provided) with level 'critical'"""
+        """Logs to the configured logger with level 'critical'"""
         self.logger.critical(*args, **kwargs)

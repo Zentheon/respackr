@@ -4,7 +4,7 @@ import click
 from termaconfig import ConfigValidationError, TermaConfig
 from terminaltables3 import DoubleTable
 
-from respackr import ascii, cli, SPEC_FILE
+from respackr import SPEC_FILE, ascii, cli
 
 
 @cli.command()
@@ -47,6 +47,7 @@ def generate(**clargs):
     from respackr import glargs
 
     logo_lines = ascii.assemble_logo()
+    click.echo()
     for line in logo_lines:
         click.echo(line)
 
