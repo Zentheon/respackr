@@ -1,7 +1,7 @@
 [pack]
 # Used for naming .zip files
 name = "example-pack"
-source_path = "./src"
+source_path = "./test/test-src.001"
 output_path = "./resourcepacks"
 # Path to a license file outside of the src dir. Makes it so
 # you don't have to include a copy with the pack sources

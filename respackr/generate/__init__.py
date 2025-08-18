@@ -1,6 +1,7 @@
 # respackr/generate/__init__.py
 
 import click
+import printree as pt
 from termaconfig import ConfigValidationError, TermaConfig
 from terminaltables3 import DoubleTable
 
@@ -68,6 +69,13 @@ def generate(**clargs):
 
     src_files = sources.SourceLoader(str(config["pack"]["source_path"]))
     src_files.load_sources()
-    print(src_files["2.json"].read())
-    print(type(src_files["2.json"]))
+    print(type(src_files["assets/minecraft/textures/gui/recipe_book.svg"]))
     print("Filetypes:", src_files.filetypes)
+
+    proxy = sources.ProxyLoader(src_files, r"x(\d+)")
+    proxy.log_errors()
+
+    pt.ptree(proxy["assets/minecraft/textures/gui/recipe_book.svg"])
+    pt.ptree(proxy["assets/minecraft/textures/gui/container/anvil.svg"])
+    # print(proxy["assets/minecraft/textures/gui/container/anvil.x32.svg"])
+    pt.ptree(proxy.errors)
