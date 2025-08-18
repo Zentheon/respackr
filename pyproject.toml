@@ -21,6 +21,7 @@ cairosvg = "^2.8.2"
 pillow = "^11.3.0"
 requests = "^2.32.4"
 click = "^8.2.1"
+structlog = "^25.4.0"
 
 [tool.ruff]
 # Default of 88 is a little low.
