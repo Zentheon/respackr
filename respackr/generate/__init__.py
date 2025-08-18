@@ -68,5 +68,6 @@ def generate(**clargs):
 
     src_files = sources.SourceLoader(str(config["pack"]["source_path"]))
     src_files.load_sources()
-    print(src_files["2.json"])
+    print(src_files["2.json"].read())
+    print(type(src_files["2.json"]))
     print("Filetypes:", src_files.filetypes)

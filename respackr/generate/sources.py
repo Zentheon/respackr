@@ -3,6 +3,7 @@
 """Contains methods for handling source files, primarily SourceLoader"""
 
 import os
+from io import BytesIO
 from pathlib import Path
 
 from respackr import log
@@ -54,11 +55,11 @@ class SourceLoader(dict):
                 rel_path = str(rel_path).replace("\\", "/")
 
                 try:
-                    with open(Path(root) / filename, "rb") as f:
-                        file_content = f.read()
+                    file_path = Path(root) / filename
+                    with open(file_path, "rb") as f:
+                        src_files[str(rel_path)] = BytesIO(f.read())
 
-                        src_files[str(rel_path)] = file_content
-                        log.debug(f"  Loaded: {rel_path}")
+                    log.debug(f"  Loaded: {rel_path}")
 
                 except Exception as e:
                     log.error(f"Error loading {rel_path}", exc_info=e)
